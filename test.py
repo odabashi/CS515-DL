@@ -1,8 +1,12 @@
 import torch
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
+import logging
 from train import get_transforms
 from utils import ClassificationMetrics, plot_confusion_matrix
+
+
+logger = logging.getLogger("HW1")
 
 
 @torch.no_grad()
@@ -44,15 +48,15 @@ def run_test(model, params, device):
 
     results = metrics.compute()
 
-    print("\n=== Test Metrics ===")
+    logger.info("\n=== Test Metrics ===")
 
-    print(f"- Accuracy:  {results['accuracy']:.4f} ({correct}/{n})")
-    print(f"- Precision: {results['precision']:.4f}")
-    print(f"- Recall:    {results['recall']:.4f}")
-    print(f"- F1 Score:  {results['f1']:.4f}")
-    print(f"- Support:")
+    logger.info(f"- Accuracy:  {results['accuracy']:.4f} ({correct}/{n})")
+    logger.info(f"- Precision: {results['precision']:.4f}")
+    logger.info(f"- Recall:    {results['recall']:.4f}")
+    logger.info(f"- F1 Score:  {results['f1']:.4f}")
+    logger.info(f"- Support:")
     for i in range(params["num_classes"]):
         acc = class_correct[i] / class_total[i]
-        print(f"\tClass {i}: {acc:.4f}  ({class_correct[i]}/{class_total[i]})")
+        logger.info(f"\tClass {i}: {acc:.4f}  ({class_correct[i]}/{class_total[i]})")
 
     plot_confusion_matrix(results["confusion_matrix"])

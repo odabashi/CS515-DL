@@ -2,16 +2,18 @@ import random
 import ssl
 import numpy as np
 import torch
-
+import logging
 from parameters import get_params
 from models import MLP
 from train import run_training
 from test import run_test
-from utils import visualize_model
+from utils import visualize_model, setup_logger
 
 
 # Fix for macOS SSL certificate verification error when downloading MNIST
 ssl._create_default_https_context = ssl._create_unverified_context
+setup_logger()
+logger = logging.getLogger("HW1")
 
 
 def set_seed(seed):
@@ -42,18 +44,18 @@ def main():
     params = get_params()
 
     set_seed(params["seed"])
-    print(f"Seed set to: {params['seed']}")
-    print(f"Dataset: {params['dataset']}  |  Model: {params['model']}")
+    logger.info(f"Seed set to: {params['seed']}")
+    logger.info(f"Dataset: {params['dataset']}  |  Model: {params['model']}")
 
     device = torch.device(
         params["device"] if torch.cuda.is_available() else
         "mps" if torch.backends.mps.is_available() else
         "cpu"
     )
-    print(f"Using device: {device}")
+    logger.info(f"Using device: {device}")
 
     model = build_model(params).to(device)
-    print(model)
+    logger.info(model)
 
     visualize_model(model)
 

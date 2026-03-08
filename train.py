@@ -4,7 +4,11 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, random_split
 from torchvision import datasets, transforms
 from tqdm import tqdm
+import logging
 from utils import EarlyStopping, plot_learning_curves
+
+
+logger = logging.getLogger("HW1")
 
 
 def get_transforms(params):
@@ -101,7 +105,7 @@ def run_training(model, params, device):
     }
 
     for epoch in range(1, params["epochs"] + 1):
-        print(f"\nEpoch {epoch}/{params['epochs']}")
+        logger.info(f"\nEpoch {epoch}/{params['epochs']}")
         tr_loss, tr_acc = train_one_epoch(model, train_loader, optimizer,
                                           criterion, device, params["log_interval"])
         val_loss, val_acc = validate(model, val_loader, criterion, device)
@@ -112,22 +116,22 @@ def run_training(model, params, device):
 
         scheduler.step()
 
-        print(f"\n=> Training loss:   {tr_loss:.4f} - Training Accuracy:   {tr_acc:.4f}")
-        print(f"=> Validation loss: {val_loss:.4f} - Validation Accuracy: {val_acc:.4f}")
+        logger.info(f"\n=> Training loss:   {tr_loss:.4f} - Training Accuracy:   {tr_acc:.4f}")
+        logger.info(f"=> Validation loss: {val_loss:.4f} - Validation Accuracy: {val_acc:.4f}")
 
         if val_acc > best_acc:
             best_acc = val_acc
             best_weights = copy.deepcopy(model.state_dict())    # snapshot in memory
             torch.save(best_weights, params["save_path"])       # persist to disk
-            print(f"\nSaved best model (validation_accuracy={best_acc:.4f})")
+            logger.info(f"\nSaved best model (validation_accuracy={best_acc:.4f})")
 
         early_stopping.step(val_loss)
         if early_stopping.stop:
-            print("Early stopping triggered.")
+            logger.warning("Early stopping triggered.")
             break
 
     # Restore best weights into the model before returning
     model.load_state_dict(best_weights)
-    print(f"\nTraining done. Best validation accuracy: {best_acc:.4f}")
+    logger.info(f"\nTraining done. Best validation accuracy: {best_acc:.4f}")
 
     plot_learning_curves(history)
