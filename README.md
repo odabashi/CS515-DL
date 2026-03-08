@@ -1,1 +1,1 @@
-# CS515-DL
+# Repository for Assignments of CS 515 - Deep Learning Course
