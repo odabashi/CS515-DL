@@ -4,12 +4,13 @@ import argparse
 def get_params():
     parser = argparse.ArgumentParser(description="MLP on MNIST")
 
-    parser.add_argument("--mode",      choices=["train", "test", "both"], default="both")
-    parser.add_argument("--dataset",   choices=["mnist"], default="mnist")
-    parser.add_argument("--model",     choices=["mlp"], default="mlp")
-    parser.add_argument("--epochs",    type=int,   default=10)
-    parser.add_argument("--lr",        type=float, default=1e-3)
-    parser.add_argument("--device",    choices=["cpu", "cuda"], type=str,   default="cpu")
+    parser.add_argument("--mode",       choices=["train", "test", "both"], default="both")
+    parser.add_argument("--dataset",    choices=["mnist"], default="mnist")
+    parser.add_argument("--model",      choices=["mlp"], default="mlp")
+    parser.add_argument("--epochs",     type=int,   default=20)
+    parser.add_argument("--lr",         type=float, default=1e-3)
+    parser.add_argument("--patience",   type=int, default=5)
+    parser.add_argument("--device",     choices=["cpu", "cuda"], type=str,   default="cuda")
     parser.add_argument("--batch_size", type=int,   default=64)
 
     args = parser.parse_args()
@@ -23,31 +24,32 @@ def get_params():
 
     return {
         # Data
-        "dataset":      args.dataset,
-        "data_dir":     "./data",
-        "num_workers":  2,
-        "mean":         mean,
-        "std":          std,
+        "dataset":          args.dataset,
+        "data_dir":         "./data",
+        "num_workers":      2,
+        "mean":             mean,
+        "std":              std,
 
         # Model
-        "model":        args.model,
-        "input_size":   input_size,
-        "hidden_sizes": [512, 256, 128],
-        "num_classes":  10,
-        "dropout":      0.3,
+        "model":            args.model,
+        "input_size":       input_size,
+        "hidden_sizes":     [512, 256, 128],
+        "num_classes":      10,
+        "dropout":          0.3,
 
         # Training
-        "epochs":        args.epochs,
-        "batch_size":    args.batch_size,
-        "learning_rate": args.lr,
-        "weight_decay":  1e-4,
+        "epochs":           args.epochs,
+        "batch_size":       args.batch_size,
+        "learning_rate":    args.lr,
+        "weight_decay":     1e-4,
+        "patience":         args.patience,
 
         # Misc
-        "seed":         42,
-        "device":       args.device,
-        "save_path":    "best_model.pth",
-        "log_interval": 100,                # print every N batches
+        "seed":             42,
+        "device":           args.device,
+        "save_path":        "best_model.pth",
+        "log_interval":     100,                # print every N batches
 
         # CLI
-        "mode":         args.mode,
+        "mode":             args.mode,
     }

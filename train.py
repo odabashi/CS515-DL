@@ -3,6 +3,8 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, random_split
 from torchvision import datasets, transforms
+from tqdm import tqdm
+from utils import EarlyStopping
 
 
 def get_transforms(params):
@@ -45,7 +47,7 @@ def get_loaders(params):
 def train_one_epoch(model, loader, optimizer, criterion, device, log_interval):
     model.train()
     total_loss, correct, n = 0.0, 0, 0
-    for batch_idx, (imgs, labels) in enumerate(loader):
+    for batch_idx, (imgs, labels) in enumerate(tqdm(loader, desc="Training", leave=False)):
         imgs, labels = imgs.to(device), labels.to(device)
 
         optimizer.zero_grad()
@@ -55,8 +57,8 @@ def train_one_epoch(model, loader, optimizer, criterion, device, log_interval):
         optimizer.step()
 
         total_loss += loss.detach().item() * imgs.size(0)
-        correct    += out.argmax(1).eq(labels).sum().item()
-        n          += imgs.size(0)
+        correct += out.argmax(1).eq(labels).sum().item()
+        n += imgs.size(0)
 
         if (batch_idx + 1) % log_interval == 0:
             print(f"  [{batch_idx+1}/{len(loader)}] "
@@ -71,11 +73,11 @@ def validate(model, loader, criterion, device):
     with torch.no_grad():
         for imgs, labels in loader:
             imgs, labels = imgs.to(device), labels.to(device)
-            out  = model(imgs)
+            out = model(imgs)
             loss = criterion(out, labels)
             total_loss += loss.detach().item() * imgs.size(0)
-            correct    += out.argmax(1).eq(labels).sum().item()
-            n          += imgs.size(0)
+            correct += out.argmax(1).eq(labels).sum().item()
+            n += imgs.size(0)
     return total_loss / n, correct / n
 
 
@@ -86,8 +88,9 @@ def run_training(model, params, device):
                                  lr=params["learning_rate"],
                                  weight_decay=params["weight_decay"])
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.5)
+    early_stopping = EarlyStopping(patience=params["patience"])
 
-    best_acc     = 0.0
+    best_acc = 0.0
     best_weights = None
 
     for epoch in range(1, params["epochs"] + 1):
@@ -101,10 +104,15 @@ def run_training(model, params, device):
         print(f"  Val   loss: {val_loss:.4f}  acc: {val_acc:.4f}")
 
         if val_acc > best_acc:
-            best_acc     = val_acc
+            best_acc = val_acc
             best_weights = copy.deepcopy(model.state_dict())    # snapshot in memory
             torch.save(best_weights, params["save_path"])       # persist to disk
-            print(f"  Saved best model (val_acc={best_acc:.4f})")
+            print(f"Saved best model (val_acc={best_acc:.4f})")
+
+        early_stopping.step(val_loss)
+        if early_stopping.stop:
+            print("Early stopping triggered.")
+            break
 
     # Restore best weights into the model before returning
     model.load_state_dict(best_weights)
