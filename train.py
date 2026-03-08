@@ -47,11 +47,11 @@ def get_loaders(params):
 def train_one_epoch(model, loader, optimizer, criterion, device, log_interval):
     model.train()
     total_loss, correct, n = 0.0, 0, 0
-    for batch_idx, (imgs, labels) in enumerate(tqdm(loader, desc="Training", leave=False)):
+    for batch_idx, (imgs, labels) in enumerate(tqdm(loader, desc="Training")):
         imgs, labels = imgs.to(device), labels.to(device)
 
         optimizer.zero_grad()
-        out  = model(imgs)
+        out = model(imgs)
         loss = criterion(out, labels)
         loss.backward()
         optimizer.step()
@@ -60,9 +60,9 @@ def train_one_epoch(model, loader, optimizer, criterion, device, log_interval):
         correct += out.argmax(1).eq(labels).sum().item()
         n += imgs.size(0)
 
-        if (batch_idx + 1) % log_interval == 0:
-            print(f"  [{batch_idx+1}/{len(loader)}] "
-                  f"loss: {total_loss/n:.4f}  acc: {correct/n:.4f}")
+        # if (batch_idx + 1) % log_interval == 0:
+        #     print(f"  [{batch_idx+1}/{len(loader)}] "
+        #           f"Training Loss: {total_loss/n:.4f} - Training Accuracy: {correct/n:.4f}")
 
     return total_loss / n, correct / n
 
@@ -100,14 +100,14 @@ def run_training(model, params, device):
         val_loss, val_acc = validate(model, val_loader, criterion, device)
         scheduler.step()
 
-        print(f"  Train loss: {tr_loss:.4f}  acc: {tr_acc:.4f}")
-        print(f"  Val   loss: {val_loss:.4f}  acc: {val_acc:.4f}")
+        print(f"\n=> Training loss:   {tr_loss:.4f} - Training Accuracy:   {tr_acc:.4f}")
+        print(f"=> Validation loss: {val_loss:.4f} - Validation Accuracy: {val_acc:.4f}")
 
         if val_acc > best_acc:
             best_acc = val_acc
             best_weights = copy.deepcopy(model.state_dict())    # snapshot in memory
             torch.save(best_weights, params["save_path"])       # persist to disk
-            print(f"Saved best model (val_acc={best_acc:.4f})")
+            print(f"\nSaved best model (validation_accuracy={best_acc:.4f})")
 
         early_stopping.step(val_loss)
         if early_stopping.stop:
@@ -116,4 +116,4 @@ def run_training(model, params, device):
 
     # Restore best weights into the model before returning
     model.load_state_dict(best_weights)
-    print(f"\nTraining done. Best val accuracy: {best_acc:.4f}")
+    print(f"\nTraining done. Best validation accuracy: {best_acc:.4f}")
