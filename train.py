@@ -1,7 +1,7 @@
 import copy
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, random_split
 from torchvision import datasets, transforms
 
 
@@ -21,15 +21,24 @@ def get_loaders(params):
     tf = get_transforms(params)
 
     if params["dataset"] == "mnist":
-        train_ds = datasets.MNIST(params["data_dir"], train=True,  download=True, transform=tf)
-        val_ds   = datasets.MNIST(params["data_dir"], train=False, download=True, transform=tf)
+        # # IMPORTANT: This is wrong approach to use the test set as a validation set. This would lead to data leakage.
+        # train_ds = datasets.MNIST(params["data_dir"], train=True,  download=True, transform=tf)
+        # val_ds   = datasets.MNIST(params["data_dir"], train=False, download=True, transform=tf)
+
+        full_train = datasets.MNIST(params["data_dir"], train=True, download=True, transform=tf)    # 60000 Data point
+
+        train_size = int(0.83 * len(full_train))    # Approx. 50000 Data point
+        val_size = len(full_train) - train_size     # Approx. 10000 Data point
+
+        # random_split randomly divides the dataset while preserving the dataset object.
+        train_ds, val_ds = random_split(full_train, [train_size, val_size])
+
     else:
         train_ds, val_ds = None, None
 
-    train_loader = DataLoader(train_ds, batch_size=params["batch_size"],
-                              shuffle=True,  num_workers=params["num_workers"])
-    val_loader   = DataLoader(val_ds,   batch_size=params["batch_size"],
-                              shuffle=False, num_workers=params["num_workers"])
+    train_loader = DataLoader(train_ds, batch_size=params["batch_size"], shuffle=True,
+                              num_workers=params["num_workers"])
+    val_loader = DataLoader(val_ds, batch_size=params["batch_size"], shuffle=False, num_workers=params["num_workers"])
     return train_loader, val_loader
 
 
