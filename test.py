@@ -2,6 +2,7 @@ import torch
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 from train import get_transforms
+from utils import ClassificationMetrics, plot_confusion_matrix
 
 
 @torch.no_grad()
@@ -18,6 +19,8 @@ def run_test(model, params, device):
     # Load best weights
     model.load_state_dict(torch.load(params["save_path"], map_location=device))
     model.eval()
+
+    metrics = ClassificationMetrics(params["num_classes"], device)
 
     correct, n = 0, 0
     class_correct = [0] * params["num_classes"]
@@ -36,8 +39,20 @@ def run_test(model, params, device):
             class_correct[t] += (p == t).item()
             class_total[t] += 1
 
-    print(f"\n=== Test Results ===")
-    print(f"Overall accuracy: {correct/n:.4f}  ({correct}/{n})\n")
+        # Calculate Evaluation Scores
+        metrics.update(preds, labels)
+
+    results = metrics.compute()
+
+    print("\n=== Test Metrics ===")
+
+    print(f"- Accuracy:  {results['accuracy']:.4f} ({correct}/{n})")
+    print(f"- Precision: {results['precision']:.4f}")
+    print(f"- Recall:    {results['recall']:.4f}")
+    print(f"- F1 Score:  {results['f1']:.4f}")
+    print(f"- Support:")
     for i in range(params["num_classes"]):
         acc = class_correct[i] / class_total[i]
-        print(f"  Class {i}: {acc:.4f}  ({class_correct[i]}/{class_total[i]})")
+        print(f"\tClass {i}: {acc:.4f}  ({class_correct[i]}/{class_total[i]})")
+
+    plot_confusion_matrix(results["confusion_matrix"])
