@@ -4,7 +4,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, random_split
 from torchvision import datasets, transforms
 from tqdm import tqdm
-from utils import EarlyStopping
+from utils import EarlyStopping, plot_learning_curves
 
 
 def get_transforms(params):
@@ -93,11 +93,23 @@ def run_training(model, params, device):
     best_acc = 0.0
     best_weights = None
 
+    history = {
+        "train_loss": [],
+        "val_loss": [],
+        "train_acc": [],
+        "val_acc": []
+    }
+
     for epoch in range(1, params["epochs"] + 1):
         print(f"\nEpoch {epoch}/{params['epochs']}")
         tr_loss, tr_acc = train_one_epoch(model, train_loader, optimizer,
                                           criterion, device, params["log_interval"])
         val_loss, val_acc = validate(model, val_loader, criterion, device)
+        history["train_loss"].append(tr_loss)
+        history["val_loss"].append(val_loss)
+        history["train_acc"].append(tr_acc)
+        history["val_acc"].append(val_acc)
+
         scheduler.step()
 
         print(f"\n=> Training loss:   {tr_loss:.4f} - Training Accuracy:   {tr_acc:.4f}")
@@ -117,3 +129,5 @@ def run_training(model, params, device):
     # Restore best weights into the model before returning
     model.load_state_dict(best_weights)
     print(f"\nTraining done. Best validation accuracy: {best_acc:.4f}")
+
+    plot_learning_curves(history)

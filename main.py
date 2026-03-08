@@ -6,7 +6,8 @@ import torch
 from parameters import get_params
 from models import MLP
 from train import run_training
-from test  import run_test
+from test import run_test
+from utils import visualize_model
 
 
 # Fix for macOS SSL certificate verification error when downloading MNIST
@@ -53,6 +54,8 @@ def main():
 
     model = build_model(params).to(device)
     print(model)
+
+    visualize_model(model)
 
     if params["mode"] in ("train", "both"):
         run_training(model, params, device)
