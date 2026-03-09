@@ -36,8 +36,11 @@ def build_model(params):
         return MLP(
             input_size=params["input_size"],
             hidden_sizes=params["hidden_sizes"],
+            hidden_activation=params["hidden_activation"],
             num_classes=params["num_classes"],
+            enable_dropout=params["enable_dropout"],
             dropout=params["dropout"],
+            enable_batch_norm=params["enable_batch_norm"]
         )
     raise ValueError(f"Unknown model: {model_name}")
 
@@ -74,7 +77,7 @@ def main():
         run_test(model, params, device)
     test_end_time = datetime.now()
     test_elapsed = (test_end_time - test_start_time).total_seconds()
-    logger.info(f"Testing took {test_elapsed:.2f}s")
+    logger.info(f"Testing (Together with plotting) took {test_elapsed:.2f}s")
 
 
 if __name__ == "__main__":

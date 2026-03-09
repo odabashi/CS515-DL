@@ -161,14 +161,14 @@ def run_training(model, params, device):
 
         scheduler.step()
 
-        logger.info(f"\n=> Training loss:   {tr_loss:.4f} - Training Accuracy:   {tr_acc:.4f}")
+        logger.info(f"=> Training loss:   {tr_loss:.4f} - Training Accuracy:   {tr_acc:.4f}")
         logger.info(f"=> Validation loss: {val_loss:.4f} - Validation Accuracy: {val_acc:.4f}")
 
         if val_acc > best_acc:
             best_acc = val_acc
             best_weights = copy.deepcopy(model.state_dict())    # snapshot in memory
             torch.save(best_weights, params["save_path"])       # persist to disk
-            logger.info(f"\nSaved best model (validation_accuracy={best_acc:.4f})")
+            logger.info(f"Saved best model (validation_accuracy={best_acc:.4f})")
 
         if params["enable_early_stopping"]:
             early_stopping.step(val_loss)
