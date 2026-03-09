@@ -60,4 +60,4 @@ def visualize_model(model, save_path=f"./assets/model_graph_{datetime.datetime.n
     y = model(x)
     dot = make_dot(y, params=dict(model.named_parameters()))
     dot.graph_attr.update(dpi="300", size="12,14")
-    dot.render(save_path, format="png")
+    dot.render(save_path, format="png", cleanup=True)
