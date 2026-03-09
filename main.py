@@ -3,6 +3,8 @@ import ssl
 import numpy as np
 import torch
 import logging
+import json
+from datetime import datetime
 from parameters import get_params
 from models import MLP
 from train import run_training
@@ -42,9 +44,10 @@ def build_model(params):
 
 def main():
     params = get_params()
+    logger.info(f"Run parameters:\n{json.dumps(params, indent=4)}")
 
     set_seed(params["seed"])
-    logger.info(f"Seed set to: {params['seed']}")
+    logger.info(f"\nSeed set to: {params['seed']}")
     logger.info(f"Dataset: {params['dataset']}  |  Model: {params['model']}")
 
     device = torch.device(
@@ -59,11 +62,19 @@ def main():
 
     visualize_model(model)
 
+    training_start_time = datetime.now()
     if params["mode"] in ("train", "both"):
         run_training(model, params, device)
+    training_end_time = datetime.now()
+    training_elapsed = (training_end_time - training_start_time).total_seconds()
+    logger.info(f"Training took {training_elapsed:.2f}s")
 
+    test_start_time = datetime.now()
     if params["mode"] in ("test", "both"):
         run_test(model, params, device)
+    test_end_time = datetime.now()
+    test_elapsed = (test_end_time - test_start_time).total_seconds()
+    logger.info(f"Testing took {test_elapsed:.2f}s")
 
 
 if __name__ == "__main__":

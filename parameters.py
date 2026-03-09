@@ -9,7 +9,7 @@ def get_params():
     parser.add_argument("--dataset",    choices=["mnist"], default="mnist")
     parser.add_argument("--model",      choices=["mlp"], default="mlp")
 
-    parser.add_argument("--epochs",     type=int,   default=30)
+    parser.add_argument("--epochs",     type=int,   default=10)
     parser.add_argument("--lr",         type=float, default=1e-3)
     parser.add_argument("--batch_size", type=int,   default=64)
     parser.add_argument("--hidden_sizes", type=int, nargs="*", default=[512, 256, 128])
