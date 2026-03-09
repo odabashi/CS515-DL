@@ -5,6 +5,7 @@ import os
 from torchviz import make_dot
 import torch
 import logging
+from sklearn.manifold import TSNE
 
 
 logger = logging.getLogger("HW1")
@@ -61,3 +62,37 @@ def visualize_model(model, save_path=f"./assets/model_graph_{datetime.datetime.n
     dot = make_dot(y, params=dict(model.named_parameters()))
     dot.graph_attr.update(dpi="300", size="12,14")
     dot.render(save_path, format="png", cleanup=True)
+
+
+def plot_tsne(logits, labels, save_path=f"tsne_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"):
+    """
+    Visualizes the decision structure of the trained model using t-SNE on logits.
+    Each point represents a sample colored by its true label.
+    """
+    tsne = TSNE(
+        n_components=2,
+        perplexity=30,
+        learning_rate="auto",
+        init="pca",
+        random_state=42
+    )
+
+    embeddings = tsne.fit_transform(logits)
+
+    plt.figure(figsize=(8, 8))
+
+    scatter = plt.scatter(
+        embeddings[:, 0],
+        embeddings[:, 1],
+        c=labels,
+        cmap="tab10",
+        s=6,
+        alpha=0.8
+    )
+
+    plt.colorbar(scatter)
+    plt.title("t-SNE Decision Space (Model Logits)")
+
+    save_fig(save_path)
+
+    plt.close()

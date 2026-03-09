@@ -3,7 +3,7 @@ from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 import logging
 from train import get_transforms
-from utils import ClassificationMetrics, plot_confusion_matrix
+from utils import ClassificationMetrics, plot_confusion_matrix, plot_tsne
 
 
 logger = logging.getLogger("HW1")
@@ -30,11 +30,18 @@ def run_test(model, params, device):
     class_correct = [0] * params["num_classes"]
     class_total = [0] * params["num_classes"]
 
+    all_logits = []
+    all_labels = []
+
     for imgs, labels in loader:
         imgs, labels = imgs.to(device), labels.to(device)
 
         logits = model(imgs)
         preds = torch.argmax(logits, dim=1)
+
+        # Save for t-SNE
+        all_logits.append(logits.detach().cpu())
+        all_labels.append(labels.detach().cpu())
 
         # Calculate Support
         correct += preds.eq(labels).sum().item()
@@ -59,4 +66,14 @@ def run_test(model, params, device):
         acc = class_correct[i] / class_total[i]
         logger.info(f"\tClass {i}: {acc:.4f}  ({class_correct[i]}/{class_total[i]})")
 
+    logger.info("Visualizing Confusion Matrix")
     plot_confusion_matrix(results["confusion_matrix"])
+
+    if params.get("plot_tsne", False):
+        logger.info("Generating t-SNE visualization...")
+
+        logits = torch.cat(all_logits).numpy()
+        labels = torch.cat(all_labels).numpy()
+
+        plot_tsne(logits, labels)
+

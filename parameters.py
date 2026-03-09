@@ -29,7 +29,9 @@ def get_params():
 
     parser.add_argument("--optimizer", type=str, choices=["sgd", "adam", "adamw", "nadam"], default="adam")
     parser.add_argument("--l1_lambda", type=float, default=0.0)
-    parser.add_argument("--weight_decay", type=float, default=1e-4)
+    parser.add_argument("--weight_decay", type=float, default=0.0)
+
+    parser.add_argument('--plot_tsne', action=argparse.BooleanOptionalAction, default=True)
 
     args = parser.parse_args()
 
@@ -74,6 +76,7 @@ def get_params():
         "device":                   args.device,
         "save_path":                "best_model.pth",
         "log_interval":             100,                # print every N batches
+        "plot_tsne":                args.plot_tsne,
 
         # CLI
         "mode":                     args.mode,
