@@ -33,20 +33,14 @@ def get_optimizer(model, params) -> torch.optim.Optimizer:
             lr=params["learning_rate"],
             weight_decay=params["weight_decay"]
         )
-    elif params["optimizer"] == "rmsprop":
-        optimizer = torch.optim.RMSprop(
-            model.parameters(),
-            lr=params["learning_rate"],
-            alpha=0.99,
-            momentum=0.9,
-            weight_decay=params["weight_decay"]
-        )
+
     elif params["optimizer"] == "nadam":
         optimizer = torch.optim.NAdam(
             model.parameters(),
             lr=params["learning_rate"],
             weight_decay=params["weight_decay"]
         )
+
     else:
         raise ValueError("Unknown optimizer!")
 
