@@ -11,6 +11,48 @@ from utils import EarlyStopping, plot_learning_curves
 logger = logging.getLogger("HW1")
 
 
+def get_optimizer(model, params) -> torch.optim.Optimizer:
+    if params["optimizer"] == "adam":
+        optimizer = torch.optim.Adam(
+            model.parameters(),
+            lr=params["learning_rate"],
+            weight_decay=params["weight_decay"]
+        )
+
+    elif params["optimizer"] == "sgd":
+        optimizer = torch.optim.SGD(
+            model.parameters(),
+            lr=params["learning_rate"],
+            momentum=0.9,
+            weight_decay=params["weight_decay"]
+        )
+
+    elif params["optimizer"] == "adamw":
+        optimizer = torch.optim.AdamW(
+            model.parameters(),
+            lr=params["learning_rate"],
+            weight_decay=params["weight_decay"]
+        )
+    elif params["optimizer"] == "rmsprop":
+        optimizer = torch.optim.RMSprop(
+            model.parameters(),
+            lr=params["learning_rate"],
+            alpha=0.99,
+            momentum=0.9,
+            weight_decay=params["weight_decay"]
+        )
+    elif params["optimizer"] == "nadam":
+        optimizer = torch.optim.NAdam(
+            model.parameters(),
+            lr=params["learning_rate"],
+            weight_decay=params["weight_decay"]
+        )
+    else:
+        raise ValueError("Unknown optimizer!")
+
+    return optimizer
+
+
 def get_transforms(params):
     mean, std = params["mean"], params["std"]
 
@@ -48,7 +90,7 @@ def get_loaders(params):
     return train_loader, val_loader
 
 
-def train_one_epoch(model, loader, optimizer, criterion, device, log_interval):
+def train_one_epoch(model, loader, optimizer, criterion, device, params):
     model.train()
     total_loss, correct, n = 0.0, 0, 0
     for batch_idx, (imgs, labels) in enumerate(tqdm(loader, desc="Training")):
@@ -57,6 +99,14 @@ def train_one_epoch(model, loader, optimizer, criterion, device, log_interval):
         optimizer.zero_grad()
         out = model(imgs)
         loss = criterion(out, labels)
+
+        # L1 Regularization
+        l1_lambda = params["l1_lambda"]
+
+        if l1_lambda > 0:
+            l1_norm = sum(p.abs().sum() for p in model.parameters())
+            loss = loss + l1_lambda * l1_norm
+
         loss.backward()
         optimizer.step()
 
@@ -64,7 +114,7 @@ def train_one_epoch(model, loader, optimizer, criterion, device, log_interval):
         correct += out.argmax(1).eq(labels).sum().item()
         n += imgs.size(0)
 
-        # if (batch_idx + 1) % log_interval == 0:
+        # if (batch_idx + 1) % params["log_interval"] == 0:
         #     print(f"  [{batch_idx+1}/{len(loader)}] "
         #           f"Training Loss: {total_loss/n:.4f} - Training Accuracy: {correct/n:.4f}")
 
@@ -88,11 +138,12 @@ def validate(model, loader, criterion, device):
 def run_training(model, params, device):
     train_loader, val_loader = get_loaders(params)
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(),
-                                 lr=params["learning_rate"],
-                                 weight_decay=params["weight_decay"])
+    optimizer = get_optimizer(model, params)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.5)
-    early_stopping = EarlyStopping(patience=params["patience"])
+
+    early_stopping = None
+    if params["enable_early_stopping"]:
+        early_stopping = EarlyStopping(patience=params["patience"])
 
     best_acc = 0.0
     best_weights = None
@@ -107,7 +158,7 @@ def run_training(model, params, device):
     for epoch in range(1, params["epochs"] + 1):
         logger.info(f"\nEpoch {epoch}/{params['epochs']}")
         tr_loss, tr_acc = train_one_epoch(model, train_loader, optimizer,
-                                          criterion, device, params["log_interval"])
+                                          criterion, device, params)
         val_loss, val_acc = validate(model, val_loader, criterion, device)
         history["train_loss"].append(tr_loss)
         history["val_loss"].append(val_loss)
@@ -125,10 +176,12 @@ def run_training(model, params, device):
             torch.save(best_weights, params["save_path"])       # persist to disk
             logger.info(f"\nSaved best model (validation_accuracy={best_acc:.4f})")
 
-        early_stopping.step(val_loss)
-        if early_stopping.stop:
-            logger.warning("Early stopping triggered.")
-            break
+        if params["enable_early_stopping"]:
+            early_stopping.step(val_loss)
+
+            if early_stopping.stop:
+                logger.warning("Early stopping triggered.")
+                break
 
     # Restore best weights into the model before returning
     model.load_state_dict(best_weights)
