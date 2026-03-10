@@ -1,4 +1,5 @@
 import copy
+from math import inf
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, random_split
@@ -149,7 +150,7 @@ def run_training(model, params, device):
     if params["enable_early_stopping"]:
         early_stopping = EarlyStopping(patience=params["patience"])
 
-    best_loss = 0.0
+    best_loss = inf
     best_acc = 0.0
     best_weights = None
 
