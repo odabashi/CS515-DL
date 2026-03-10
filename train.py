@@ -149,6 +149,7 @@ def run_training(model, params, device):
     if params["enable_early_stopping"]:
         early_stopping = EarlyStopping(patience=params["patience"])
 
+    best_loss = 0.0
     best_acc = 0.0
     best_weights = None
 
@@ -173,17 +174,19 @@ def run_training(model, params, device):
 
         scheduler.step()
 
-        if val_acc > best_acc:
+        if val_loss < best_loss:
+            best_loss = val_loss
             best_acc = val_acc
             best_weights = copy.deepcopy(model.state_dict())    # snapshot in memory
             torch.save(best_weights, params["save_path"])       # persist to disk
-            logger.info(f"Saved best model (validation_accuracy={best_acc:.4f})")
+            logger.info(f"Saved best model (validation_loss={best_loss:.4f})")
 
         if params["enable_early_stopping"]:
             early_stopping.step(val_loss)
 
             if early_stopping.stop:
-                logger.warning("Early stopping triggered.")
+                logger.warning(f"Early stopping triggered. Epoch {epoch - params["patience"]} had the lowest "
+                               f"validation loss ({best_loss}).")
                 break
 
     # Restore best weights into the model before returning
