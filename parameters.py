@@ -4,7 +4,7 @@ import argparse
 def get_params():
     parser = argparse.ArgumentParser(description="MLP on MNIST")
 
-    parser.add_argument("--mode",       choices=["train", "test", "both"], default="both")
+    parser.add_argument("--mode",       choices=["train", "test", "both"], default="train")
     parser.add_argument("--device",     choices=["cpu", "cuda"], type=str,   default="cuda")
     parser.add_argument("--dataset",    choices=["mnist"], default="mnist")
     parser.add_argument("--model",      choices=["mlp"], default="mlp")
@@ -16,13 +16,13 @@ def get_params():
     parser.add_argument("--hidden_activation", type=str, choices=["relu", "gelu", "leaky_relu", "elu", "tanh"],
                         default="relu")
 
-    # --no-enable_dropout, # --enable_dropout
-    parser.add_argument('--enable_dropout', action=argparse.BooleanOptionalAction, default=False)
-    parser.add_argument("--dropout",        type=float, default=0.3)
-
     # --no-enable_early_stopping, # --enable_early_stopping
     parser.add_argument('--enable_early_stopping', action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument("--patience",       type=int, default=5)
+
+    # --no-enable_dropout, # --enable_dropout
+    parser.add_argument('--enable_dropout', action=argparse.BooleanOptionalAction, default=False)
+    parser.add_argument("--dropout",        type=float, default=0.3)
 
     # --no-enable_batch_norm, # --enable_batch_norm
     parser.add_argument('--enable_batch_norm', action=argparse.BooleanOptionalAction, default=False)

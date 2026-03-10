@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader, random_split
 from torchvision import datasets, transforms
 from tqdm import tqdm
 import logging
-from utils import EarlyStopping, plot_learning_curves
+from utils import EarlyStopping, plot_learning_curves, ClassificationMetrics
 
 
 logger = logging.getLogger("HW1")
@@ -80,7 +80,7 @@ def get_loaders(params):
 
     train_loader = DataLoader(train_ds, batch_size=params["batch_size"], shuffle=True,
                               num_workers=params["num_workers"])
-    val_loader = DataLoader(val_ds, batch_size=params["batch_size"], shuffle=False, num_workers=params["num_workers"])
+    val_loader = DataLoader(val_ds, batch_size=params["batch_size"], shuffle=True, num_workers=params["num_workers"])
     return train_loader, val_loader
 
 
@@ -115,9 +115,10 @@ def train_one_epoch(model, loader, optimizer, criterion, device, params):
     return total_loss / n, correct / n
 
 
-def validate(model, loader, criterion, device):
+def validate(model, loader, criterion, device, params):
     model.eval()
     total_loss, correct, n = 0.0, 0, 0
+    val_metrics = ClassificationMetrics(params["num_classes"], device)
     with torch.no_grad():
         for imgs, labels in loader:
             imgs, labels = imgs.to(device), labels.to(device)
@@ -126,6 +127,15 @@ def validate(model, loader, criterion, device):
             total_loss += loss.detach().item() * imgs.size(0)
             correct += out.argmax(1).eq(labels).sum().item()
             n += imgs.size(0)
+            preds = torch.argmax(out, dim=1)
+            val_metrics.update(preds, labels)
+
+    results = val_metrics.compute()
+
+    logger.info("========= Validation Metrics =========")
+    logger.info(f"=> Accuracy:  {(correct / n):.4f} ({correct}/{n}), Precision: {results['precision']:.4f}, "
+                f"Recall: {results['recall']:.4f}, F1 Score: {results['f1']:.4f}")
+    logger.info("======================================")
     return total_loss / n, correct / n
 
 
@@ -153,16 +163,15 @@ def run_training(model, params, device):
         logger.info(f"\nEpoch {epoch}/{params['epochs']}")
         tr_loss, tr_acc = train_one_epoch(model, train_loader, optimizer,
                                           criterion, device, params)
-        val_loss, val_acc = validate(model, val_loader, criterion, device)
+        logger.info(f"=> Training loss:   {tr_loss:.4f} - Training Accuracy:   {tr_acc:.4f}")
+        val_loss, val_acc = validate(model, val_loader, criterion, device, params)
+        logger.info(f"=> Validation loss: {val_loss:.4f} - Validation Accuracy: {val_acc:.4f}")
         history["train_loss"].append(tr_loss)
         history["val_loss"].append(val_loss)
         history["train_acc"].append(tr_acc)
         history["val_acc"].append(val_acc)
 
         scheduler.step()
-
-        logger.info(f"=> Training loss:   {tr_loss:.4f} - Training Accuracy:   {tr_acc:.4f}")
-        logger.info(f"=> Validation loss: {val_loss:.4f} - Validation Accuracy: {val_acc:.4f}")
 
         if val_acc > best_acc:
             best_acc = val_acc

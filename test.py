@@ -1,6 +1,6 @@
 import torch
 from torch.utils.data import DataLoader
-from torchvision import datasets, transforms
+from torchvision import datasets
 import logging
 from train import get_transforms
 from utils import ClassificationMetrics, plot_confusion_matrix, plot_tsne
@@ -55,16 +55,15 @@ def run_test(model, params, device):
 
     results = metrics.compute()
 
-    logger.info("\n=== Test Metrics ===")
+    logger.info("\n============ Test Metrics ============")
 
-    logger.info(f"- Accuracy:  {results['accuracy']:.4f} ({correct}/{n})")
-    logger.info(f"- Precision: {results['precision']:.4f}")
-    logger.info(f"- Recall:    {results['recall']:.4f}")
-    logger.info(f"- F1 Score:  {results['f1']:.4f}")
+    logger.info(f"=> Accuracy:  {(correct / n):.4f} ({correct}/{n}), Precision: {results['precision']:.4f}, "
+                f"Recall: {results['recall']:.4f}, F1 Score: {results['f1']:.4f}")
+    logger.info("======================================")
     logger.info(f"- Support:")
     for i in range(params["num_classes"]):
         acc = class_correct[i] / class_total[i]
-        logger.info(f"\tClass {i}: {acc:.4f}  ({class_correct[i]}/{class_total[i]})")
+        logger.info(f"\tClass {i}: {acc:.4f} ({class_correct[i]}/{class_total[i]})")
 
     logger.info("Visualizing Confusion Matrix")
     plot_confusion_matrix(results["confusion_matrix"])

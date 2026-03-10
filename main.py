@@ -72,12 +72,12 @@ def main():
     training_elapsed = (training_end_time - training_start_time).total_seconds()
     logger.info(f"Training took {training_elapsed:.2f}s")
 
-    test_start_time = datetime.now()
     if params["mode"] in ("test", "both"):
+        test_start_time = datetime.now()
         run_test(model, params, device)
-    test_end_time = datetime.now()
-    test_elapsed = (test_end_time - test_start_time).total_seconds()
-    logger.info(f"Testing (Together with plotting) took {test_elapsed:.2f}s")
+        test_end_time = datetime.now()
+        test_elapsed = (test_end_time - test_start_time).total_seconds()
+        logger.info(f"Testing (Together with plotting) took {test_elapsed:.2f}s")
 
 
 if __name__ == "__main__":

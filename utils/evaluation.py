@@ -1,5 +1,4 @@
 from torchmetrics.classification import (
-    MulticlassAccuracy,
     MulticlassPrecision,
     MulticlassRecall,
     MulticlassF1Score,
@@ -11,19 +10,13 @@ class ClassificationMetrics:
     """
     Wrapper around TorchMetrics for MNIST classification.
     """
-
     def __init__(self, num_classes, device):
-
-        self.accuracy = MulticlassAccuracy(num_classes=num_classes).to(device)
         self.precision = MulticlassPrecision(num_classes=num_classes, average="macro").to(device)
         self.recall = MulticlassRecall(num_classes=num_classes, average="macro").to(device)
         self.f1 = MulticlassF1Score(num_classes=num_classes, average="macro").to(device)
-
         self.confusion_matrix = MulticlassConfusionMatrix(num_classes=num_classes).to(device)
 
     def update(self, predictions, targets):
-
-        self.accuracy.update(predictions, targets)
         self.precision.update(predictions, targets)
         self.recall.update(predictions, targets)
         self.f1.update(predictions, targets)
@@ -31,7 +24,6 @@ class ClassificationMetrics:
 
     def compute(self):
         return {
-            "accuracy": self.accuracy.compute().item(),
             "precision": self.precision.compute().item(),
             "recall": self.recall.compute().item(),
             "f1": self.f1.compute().item(),
