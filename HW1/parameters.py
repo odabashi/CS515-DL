@@ -4,30 +4,30 @@ import argparse
 def get_params():
     parser = argparse.ArgumentParser(description="MLP on MNIST")
 
-    parser.add_argument("--mode",       choices=["train", "test", "both"], default="train")
+    parser.add_argument("--mode",       choices=["train", "test", "both"], default="test")
     parser.add_argument("--device",     choices=["cpu", "cuda"], type=str,   default="cuda")
     parser.add_argument("--dataset",    choices=["mnist"], default="mnist")
     parser.add_argument("--model",      choices=["mlp"], default="mlp")
 
-    parser.add_argument("--epochs",     type=int,   default=10)
+    parser.add_argument("--epochs",     type=int,   default=30)
     parser.add_argument("--lr",         type=float, default=1e-3)
     parser.add_argument("--batch_size", type=int,   default=64)
-    parser.add_argument("--hidden_sizes", type=int, nargs="*", default=[256, 128])
+    parser.add_argument("--hidden_sizes", type=int, nargs="*", default=[512, 256, 128])
     parser.add_argument("--hidden_activation", type=str, choices=["relu", "gelu", "leaky_relu", "elu", "tanh"],
                         default="relu")
 
     # --no-enable_early_stopping, # --enable_early_stopping
-    parser.add_argument('--enable_early_stopping', action=argparse.BooleanOptionalAction, default=False)
+    parser.add_argument('--enable_early_stopping', action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--patience",       type=int, default=5)
 
     # --no-enable_dropout, # --enable_dropout
-    parser.add_argument('--enable_dropout', action=argparse.BooleanOptionalAction, default=False)
-    parser.add_argument("--dropout",        type=float, default=0.3)
+    parser.add_argument('--enable_dropout', action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--dropout",        type=float, default=0.2)
 
     # --no-enable_batch_norm, # --enable_batch_norm
-    parser.add_argument('--enable_batch_norm', action=argparse.BooleanOptionalAction, default=False)
+    parser.add_argument('--enable_batch_norm', action=argparse.BooleanOptionalAction, default=True)
 
-    parser.add_argument("--optimizer", type=str, choices=["sgd", "adam", "adamw", "nadam"], default="adam")
+    parser.add_argument("--optimizer", type=str, choices=["sgd", "adam", "adamw"], default="adamw")
     parser.add_argument("--l1_lambda", type=float, default=0.0)
     parser.add_argument("--weight_decay", type=float, default=0.0)
 
