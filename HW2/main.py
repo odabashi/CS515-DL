@@ -1,0 +1,84 @@
+import random
+import ssl
+import numpy as np
+import torch
+import logging
+import json
+from datetime import datetime
+from parameters import get_params
+from models import MLP
+from train import run_training
+from test import run_test
+from utils import visualize_model, setup_logger
+
+
+# Fix for macOS SSL certificate verification error when downloading MNIST
+ssl._create_default_https_context = ssl._create_unverified_context
+setup_logger()
+logger = logging.getLogger("HW2")
+
+
+def set_seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+
+def build_model(params):
+
+    model_name = params["model"]
+    dataset = params["dataset"]
+
+    if model_name == "mlp":
+        return MLP(
+            input_size=params["input_size"],
+            hidden_sizes=params["hidden_sizes"],
+            hidden_activation=params["hidden_activation"],
+            num_classes=params["num_classes"],
+            enable_dropout=params["enable_dropout"],
+            dropout=params["dropout"],
+            enable_batch_norm=params["enable_batch_norm"]
+        )
+    raise ValueError(f"Unknown model: {model_name}")
+
+
+def main():
+    params = get_params()
+    logger.info(f"Run parameters:\n{json.dumps(params, indent=4)}")
+
+    set_seed(params["seed"])
+    logger.info(f"\nSeed set to: {params['seed']}")
+    logger.info(f"Dataset: {params['dataset']}  |  Model: {params['model']}")
+
+    device = torch.device(
+        params["device"] if torch.cuda.is_available() else
+        "mps" if torch.backends.mps.is_available() else
+        "cpu"
+    )
+    logger.info(f"Using device: {device}")
+
+    model = build_model(params).to(device)
+    logger.info(model)
+
+    visualize_model(model)
+
+    training_start_time = datetime.now()
+    if params["mode"] in ("train", "both"):
+        run_training(model, params, device)
+    training_end_time = datetime.now()
+    training_elapsed = (training_end_time - training_start_time).total_seconds()
+    logger.info(f"Training took {training_elapsed:.2f}s")
+
+    if params["mode"] in ("test", "both"):
+        test_start_time = datetime.now()
+        run_test(model, params, device)
+        test_end_time = datetime.now()
+        test_elapsed = (test_end_time - test_start_time).total_seconds()
+        logger.info(f"Testing (Together with plotting) took {test_elapsed:.2f}s")
+
+
+if __name__ == "__main__":
+    main()
