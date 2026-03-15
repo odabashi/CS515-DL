@@ -15,6 +15,8 @@ def run_test(model, params, device):
 
     if params["dataset"] == "mnist":
         test_ds = datasets.MNIST(params["data_dir"], train=False, download=True, transform=tf)
+    elif params["dataset"] == "cifar10":
+        test_ds = datasets.CIFAR10(params["data_dir"], train=False, download=True, transform=tf)
     else:
         test_ds = None
 
