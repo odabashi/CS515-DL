@@ -11,7 +11,7 @@ logger = logging.getLogger("HW1")
 
 @torch.no_grad()
 def run_test(model, params, device):
-    tf = get_transforms(params)
+    tf = get_transforms(params, train=False)
 
     if params["dataset"] == "mnist":
         test_ds = datasets.MNIST(params["data_dir"], train=False, download=True, transform=tf)

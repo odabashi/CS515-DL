@@ -48,7 +48,7 @@ def get_optimizer(model, params) -> torch.optim.Optimizer:
     return optimizer
 
 
-def get_transforms(params):
+def get_transforms(params, train=True):
     mean, std = params["mean"], params["std"]
 
     if params["dataset"] == "mnist":
@@ -56,6 +56,19 @@ def get_transforms(params):
             transforms.ToTensor(),
             transforms.Normalize(mean, std),
         ])
+    elif params["dataset"] == "cifar10":
+        if train:
+            return transforms.Compose([
+                transforms.RandomCrop(32, padding=4),
+                transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(),
+                transforms.Normalize(mean, std),
+            ])
+        else:
+            return transforms.Compose([
+                transforms.ToTensor(),
+                transforms.Normalize(mean, std),
+            ])
     else:
         return None
 
@@ -75,7 +88,17 @@ def get_loaders(params):
 
         # random_split randomly divides the dataset while preserving the dataset object.
         train_ds, val_ds = random_split(full_train, [train_size, val_size])
+    elif params["dataset"] == "cifar10":
+        train_tf = get_transforms(params, train=True)
+        val_tf = get_transforms(params, train=False)
 
+        full_train = datasets.CIFAR10(params["data_dir"], train=True, download=True, transform=train_tf)
+        train_size = int(0.83 * len(full_train))
+        val_size = len(full_train) - train_size
+        train_ds, _ = random_split(full_train, [train_size, val_size])
+
+        full_val = datasets.CIFAR10(params["data_dir"], train=True, download=True, transform=val_tf)
+        _, val_ds = random_split(full_val, [train_size, val_size])
     else:
         train_ds, val_ds = None, None
 
