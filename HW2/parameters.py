@@ -4,10 +4,10 @@ import argparse
 def get_params():
     parser = argparse.ArgumentParser(description="Deep Learning on MNIST / CIFAR-10")
 
-    parser.add_argument("--mode",       choices=["train", "test", "both"], default="test")
+    parser.add_argument("--mode",       choices=["train", "test", "both"], default="both")
     parser.add_argument("--device",     choices=["cpu", "cuda"], type=str,   default="cuda")
-    parser.add_argument("--dataset",    choices=["mnist", "cifar10"], default="mnist")
-    parser.add_argument("--model",      choices=["mlp", "vgg", "resnet", "mobilenet"], default="mlp")
+    parser.add_argument("--dataset",    choices=["mnist", "cifar10"], default="cifar10")
+    parser.add_argument("--model",      choices=["mlp", "vgg", "resnet", "mobilenet"], default="vgg")
 
     parser.add_argument("--epochs",     type=int,   default=30)
     parser.add_argument("--lr",         type=float, default=1e-3)
@@ -40,6 +40,11 @@ def get_params():
                         help="Number of blocks per ResNet layer (default: 2 2 2 2 = ResNet-18)")
 
     parser.add_argument('--plot_tsne', action=argparse.BooleanOptionalAction, default=True)
+
+    # Transfer Learning
+    parser.add_argument("--pretrained", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--freeze_features", action=argparse.BooleanOptionalAction, default=False)
+    parser.add_argument("--resize_input", action=argparse.BooleanOptionalAction, default=False)
 
     args = parser.parse_args()
 
@@ -75,6 +80,9 @@ def get_params():
         "enable_batch_norm":        args.enable_batch_norm,
         "vgg_depth":                args.vgg_depth,
         "resnet_layers":            args.resnet_layers,
+        "pretrained":               args.pretrained,
+        "freeze_features":          args.freeze_features,
+        "resize_input":             args.resize_input,
 
         # Training
         "epochs":                   args.epochs,

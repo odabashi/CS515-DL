@@ -6,6 +6,7 @@ import logging
 import json
 from datetime import datetime
 from parameters import get_params
+from models.pretrained import get_pretrained_model
 from models import MLP, MNIST_CNN, SimpleCNN, VGG, ResNet, BasicResBlock, MobileNetV2
 from train import run_training
 from test import run_test
@@ -82,7 +83,10 @@ def main():
     )
     logger.info(f"Using device: {device}")
 
-    model = build_model(params).to(device)
+    if params["pretrained"]:
+        model = get_pretrained_model(params=params, load_default_weights=True).to(device)
+    else:
+        model = build_model(params).to(device)
     logger.info(model)
 
     visualize_model(model, params)

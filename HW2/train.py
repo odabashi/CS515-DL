@@ -15,14 +15,14 @@ logger = logging.getLogger("HW2")
 def get_optimizer(model, params) -> torch.optim.Optimizer:
     if params["optimizer"] == "adam":
         optimizer = torch.optim.Adam(
-            model.parameters(),
+            filter(lambda p: p.requires_grad, model.parameters()),
             lr=params["learning_rate"],
             weight_decay=params["weight_decay"]
         )
 
     elif params["optimizer"] == "sgd":
         optimizer = torch.optim.SGD(
-            model.parameters(),
+            filter(lambda p: p.requires_grad, model.parameters()),
             lr=params["learning_rate"],
             momentum=0.9,
             weight_decay=params["weight_decay"]
@@ -30,14 +30,14 @@ def get_optimizer(model, params) -> torch.optim.Optimizer:
 
     elif params["optimizer"] == "adamw":
         optimizer = torch.optim.AdamW(
-            model.parameters(),
+            filter(lambda p: p.requires_grad, model.parameters()),
             lr=params["learning_rate"],
             weight_decay=params["weight_decay"]
         )
 
     elif params["optimizer"] == "nadam":
         optimizer = torch.optim.NAdam(
-            model.parameters(),
+            filter(lambda p: p.requires_grad, model.parameters()),
             lr=params["learning_rate"],
             weight_decay=params["weight_decay"]
         )
@@ -61,7 +61,14 @@ def get_transforms(params, train=True):
     """
     mean, std = params["mean"], params["std"]
 
+    # Check if we need resizing (for pretrained models like VGG)
+    resize = params.get("resize_input", False)
+
     transform_list = []
+
+    # Resize if required (for pretrained models on ImageNet)
+    if resize:
+        transform_list.append(transforms.Resize((224, 224)))
 
     if params["dataset"] == "mnist":
         transform_list.extend([
