@@ -10,7 +10,7 @@ from models.pretrained import get_pretrained_model
 from models import MLP, MNIST_CNN, SimpleCNN, VGG, ResNet, BasicResBlock, MobileNetV2
 from train import run_training
 from test import run_test
-from utils import visualize_model, setup_logger
+from utils import visualize_model, setup_logger, compute_flops
 
 
 # Fix for macOS SSL certificate verification error when downloading MNIST
@@ -105,6 +105,11 @@ def main():
     else:
         model = build_model(params).to(device)
     logger.info(model)
+
+    flops, params_count = compute_flops(model)
+
+    logger.info(f"FLOPs: {flops}")
+    logger.info(f"Model Parameters count: {params_count}")
 
     visualize_model(model, params)
 

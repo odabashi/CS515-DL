@@ -4,6 +4,7 @@ from torchmetrics.classification import (
     MulticlassF1Score,
     MulticlassConfusionMatrix
 )
+from ptflops import get_model_complexity_info
 
 
 class ClassificationMetrics:
@@ -29,3 +30,24 @@ class ClassificationMetrics:
             "f1": self.f1.compute().item(),
             "confusion_matrix": self.confusion_matrix.compute().cpu()
         }
+
+
+def compute_flops(model, input_size=(3, 32, 32)):
+    """
+    Compute FLOPs and number of parameters.
+
+    Args:
+        model: PyTorch model
+        input_size: (C, H, W), here is (3, 32, 32) to match the input size of models trained on CIFAR-10
+
+    Returns:
+        flops, params
+    """
+    flops, params = get_model_complexity_info(
+        model,
+        input_size,
+        as_strings=True,
+        print_per_layer_stat=False,
+        verbose=True
+    )
+    return flops, params
