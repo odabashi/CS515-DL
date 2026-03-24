@@ -31,6 +31,46 @@ def kd_loss(student_logits, teacher_logits, temperature):
     return F.kl_div(student_soft, teacher_soft, reduction='batchmean') * (temperature * temperature)
 
 
+def custom_kd_targets(teacher_logits, labels, temperature):
+    """
+    Create teacher-guided label smoothing targets.
+
+    Args:
+        teacher_logits: teacher output (before softmax)
+        labels: ground truth labels
+        temperature: temperature
+
+    Returns:
+        Modified probability distribution
+    """
+    probs = F.softmax(teacher_logits / temperature, dim=1)
+
+    batch_size, num_classes = probs.shape
+    new_targets = torch.zeros_like(probs)
+
+    # Get teacher confidence for true class
+    true_class_probs = probs[torch.arange(batch_size), labels]
+
+    # Assign true class probability
+    new_targets[torch.arange(batch_size), labels] = true_class_probs
+
+    # Distribute remaining probability uniformly
+    remaining = (1.0 - true_class_probs) / (num_classes - 1)
+
+    for i in range(batch_size):
+        for j in range(num_classes):
+            if j != labels[i]:
+                new_targets[i, j] = remaining[i]
+
+    return new_targets
+
+
+def custom_kd_loss(student_logits, teacher_logits, labels, temperature):
+    student_log_probs = F.log_softmax(student_logits / temperature, dim=1)
+    target_probs = custom_kd_targets(teacher_logits, labels, temperature)
+    return F.kl_div(student_log_probs, target_probs, reduction='batchmean') * (temperature * temperature)
+
+
 def get_optimizer(model, params) -> torch.optim.Optimizer:
     if params["optimizer"] == "adam":
         optimizer = torch.optim.Adam(
@@ -161,7 +201,12 @@ def train_one_epoch(model, loader, optimizer, criterion, device, params, teacher
             with torch.no_grad():
                 teacher_out = teacher_model(imgs)
 
-            kd = kd_loss(out, teacher_out, params["kd_temperature"])
+            if params["kd_mode"] == "standard":
+                kd = kd_loss(out, teacher_out, params["kd_temperature"])
+            elif params["kd_mode"] == "custom":
+                kd = custom_kd_loss(out, teacher_out, labels, params["kd_temperature"])
+            else:
+                raise ValueError(f"Unknown KD mode: {params['kd_mode']}")
 
             loss = params["kd_alpha"] * ce_loss + (1 - params["kd_alpha"]) * kd
         else:
