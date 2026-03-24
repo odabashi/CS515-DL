@@ -6,7 +6,7 @@ import logging
 import json
 from datetime import datetime
 from parameters import get_params
-from models import MLP
+from models import MLP, MNIST_CNN, SimpleCNN, VGG, ResNet, BasicResBlock, MobileNetV2
 from train import run_training
 from test import run_test
 from utils import visualize_model, setup_logger
@@ -42,6 +42,28 @@ def build_model(params):
             dropout=params["dropout"],
             enable_batch_norm=params["enable_batch_norm"]
         )
+    if model_name == "cnn":
+        # MNIST_CNN expects 1-channel 28×28; SimpleCNN expects 3-channel 32×32
+        if dataset == "mnist":
+            return MNIST_CNN(num_classes=params["num_classes"])
+        else:
+            return SimpleCNN(num_classes=params["num_classes"])
+
+    if model_name == "vgg":
+        if dataset == "mnist":
+            raise ValueError("VGG is designed for 3-channel images; use cifar10 with vgg.")
+        return VGG(depth=params["vgg_depth"], num_class=params["num_classes"])
+
+    if model_name == "resnet":
+        if dataset == "mnist":
+            raise ValueError("ResNet is designed for 3-channel images; use cifar10 with resnet.")
+        return ResNet(BasicResBlock, params["resnet_layers"], num_classes=params["num_classes"])
+
+    if model_name == "mobilenet":
+        if dataset == "mnist":
+            raise ValueError("MobileNetV2 is designed for 3-channel images; use cifar10 with mobilenet.")
+        return MobileNetV2(num_classes=params["num_classes"])
+
     raise ValueError(f"Unknown model: {model_name}")
 
 
