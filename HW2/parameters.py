@@ -7,7 +7,8 @@ def get_params():
     parser.add_argument("--mode",       choices=["train", "test", "both"], default="both")
     parser.add_argument("--device",     choices=["cpu", "cuda"], type=str,   default="cuda")
     parser.add_argument("--dataset",    choices=["mnist", "cifar10"], default="cifar10")
-    parser.add_argument("--model",      choices=["mlp", "vgg", "resnet", "mobilenet"], default="vgg")
+    parser.add_argument("--model",      choices=["mlp", "vgg", "resnet", "mobilenet"], default="resnet")
+    parser.add_argument("--teacher_model", choices=["mlp", "vgg", "resnet", "mobilenet"], default="resnet")
 
     parser.add_argument("--epochs",     type=int,   default=30)
     parser.add_argument("--lr",         type=float, default=1e-3)
@@ -42,9 +43,23 @@ def get_params():
     parser.add_argument('--plot_tsne', action=argparse.BooleanOptionalAction, default=True)
 
     # Transfer Learning
-    parser.add_argument("--pretrained", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--pretrained", action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument("--freeze_features", action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument("--resize_input", action=argparse.BooleanOptionalAction, default=False)
+
+    # Knowledge Distillation & Label Smoothing
+    parser.add_argument("--label_smoothing", type=float, default=0.0,
+                        help="Epsilon value for label smoothing (0.0 = disabled)")
+    parser.add_argument("--enable_kd", action=argparse.BooleanOptionalAction, default=False,
+                        help="Enable knowledge distillation")
+    parser.add_argument("--teacher_model_path", type=str, default="teacher.pth",
+                        help="Path to pretrained teacher model")
+    parser.add_argument("--kd_temperature", type=float, default=4.0,
+                        help="Temperature for KD softening")
+    parser.add_argument("--kd_alpha", type=float, default=0.5,
+                        help="Weight between CE loss and KD loss")
+    parser.add_argument("--kd_mode", choices=["standard", "custom"], default="standard",
+                        help="standard: normal KD | custom: teacher-guided label smoothing")
 
     args = parser.parse_args()
 
@@ -80,9 +95,20 @@ def get_params():
         "enable_batch_norm":        args.enable_batch_norm,
         "vgg_depth":                args.vgg_depth,
         "resnet_layers":            args.resnet_layers,
+
+        # Transfer Learning
         "pretrained":               args.pretrained,
         "freeze_features":          args.freeze_features,
         "resize_input":             args.resize_input,
+
+        # Knowledge distillation & Label smoothing
+        "teacher_model": args.teacher_model,
+        "label_smoothing": args.label_smoothing,
+        "enable_kd": args.enable_kd,
+        "teacher_model_path": args.teacher_model_path,
+        "kd_temperature": args.kd_temperature,
+        "kd_alpha": args.kd_alpha,
+        "kd_mode": args.kd_mode,
 
         # Training
         "epochs":                   args.epochs,
