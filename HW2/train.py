@@ -1,5 +1,6 @@
 import copy
 from math import inf
+import torch.nn.functional as F
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, random_split
@@ -10,6 +11,24 @@ from utils import EarlyStopping, plot_learning_curves, ClassificationMetrics
 
 
 logger = logging.getLogger("HW2")
+
+
+def kd_loss(student_logits, teacher_logits, temperature):
+    """
+    Knowledge Distillation loss using KL Divergence.
+
+    Args:
+        student_logits: output from student model
+        teacher_logits: output from teacher model
+        temperature: temperature
+
+    Returns:
+        KD loss (scalar)
+    """
+    student_soft = F.log_softmax(student_logits / temperature, dim=1)
+    teacher_soft = F.softmax(teacher_logits / temperature, dim=1)
+
+    return F.kl_div(student_soft, teacher_soft, reduction='batchmean') * (temperature * temperature)
 
 
 def get_optimizer(model, params) -> torch.optim.Optimizer:
@@ -126,7 +145,7 @@ def get_loaders(params):
     return train_loader, val_loader
 
 
-def train_one_epoch(model, loader, optimizer, criterion, device, params):
+def train_one_epoch(model, loader, optimizer, criterion, device, params, teacher_model=None):
     model.train()
     total_loss, correct, n = 0.0, 0, 0
     for batch_idx, (imgs, labels) in enumerate(tqdm(loader, desc="Training")):
@@ -134,7 +153,19 @@ def train_one_epoch(model, loader, optimizer, criterion, device, params):
 
         optimizer.zero_grad()
         out = model(imgs)
-        loss = criterion(out, labels)
+
+        # Standard CE loss
+        ce_loss = criterion(out, labels)
+
+        if params["enable_kd"]:
+            with torch.no_grad():
+                teacher_out = teacher_model(imgs)
+
+            kd = kd_loss(out, teacher_out, params["kd_temperature"])
+
+            loss = params["kd_alpha"] * ce_loss + (1 - params["kd_alpha"]) * kd
+        else:
+            loss = ce_loss
 
         # L1 Regularization
         l1_lambda = params["l1_lambda"]
@@ -181,9 +212,10 @@ def validate(model, loader, criterion, device, params):
     return total_loss / n, correct / n
 
 
-def run_training(model, params, device):
+def run_training(model, params, device, teacher_model=None):
     train_loader, val_loader = get_loaders(params)
-    criterion = nn.CrossEntropyLoss()
+
+    criterion = nn.CrossEntropyLoss(label_smoothing=params["label_smoothing"])
     optimizer = get_optimizer(model, params)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.5)
 
@@ -205,7 +237,7 @@ def run_training(model, params, device):
     for epoch in range(1, params["epochs"] + 1):
         logger.info(f"\nEpoch {epoch}/{params['epochs']}")
         tr_loss, tr_acc = train_one_epoch(model, train_loader, optimizer,
-                                          criterion, device, params)
+                                          criterion, device, params, teacher_model)
         logger.info(f"=> Training loss:   {tr_loss:.4f} - Training Accuracy:   {tr_acc:.4f}")
         val_loss, val_acc = validate(model, val_loader, criterion, device, params)
         logger.info(f"=> Validation loss: {val_loss:.4f} - Validation Accuracy: {val_acc:.4f}")

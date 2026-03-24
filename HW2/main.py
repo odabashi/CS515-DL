@@ -28,9 +28,11 @@ def set_seed(seed):
     torch.backends.cudnn.benchmark = False
 
 
-def build_model(params):
-
-    model_name = params["model"]
+def build_model(params, teacher_model=False):
+    if teacher_model:
+        model_name = params["teacher_model"]
+    else:
+        model_name = params["model"]
     dataset = params["dataset"]
 
     if model_name == "mlp":
@@ -83,6 +85,21 @@ def main():
     )
     logger.info(f"Using device: {device}")
 
+    teacher_model = None
+
+    if params["enable_kd"]:
+        assert params["teacher_model_path"] is not None, "Teacher model path must be provided for KD"
+
+        teacher_model = build_model(params, teacher_model=True).to(device)
+        teacher_model.load_state_dict(torch.load(params["teacher_model_path"], map_location=device))
+        teacher_model.eval()
+
+        # Freeze teacher
+        for p in teacher_model.parameters():
+            p.requires_grad = False
+
+        logger.info("Teacher model loaded and frozen for Knowledge Distillation")
+
     if params["pretrained"]:
         model = get_pretrained_model(params=params, load_default_weights=True).to(device)
     else:
@@ -93,7 +110,7 @@ def main():
 
     training_start_time = datetime.now()
     if params["mode"] in ("train", "both"):
-        run_training(model, params, device)
+        run_training(model, params, device, teacher_model)
     training_end_time = datetime.now()
     training_elapsed = (training_end_time - training_start_time).total_seconds()
     logger.info(f"Training took {training_elapsed:.2f}s")
