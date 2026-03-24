@@ -56,8 +56,16 @@ def plot_learning_curves(history, save_path=f"loss_curves_{datetime.datetime.now
     plt.close()
 
 
-def visualize_model(model, save_path=f"./assets/model_graph_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"):
-    x = torch.randn(4, 1, 28, 28).to(next(model.parameters()).device)
+def visualize_model(model, params, save_path=f"./assets/model_graph_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"):
+    if params["dataset"] == "mnist":
+        x = torch.randn(4, 1, 28, 28).to(next(model.parameters()).device)
+    elif params["dataset"] == "cifar10":
+        if params.get("resize_input", False):
+            x = torch.randn(4, 3, 224, 224).to(next(model.parameters()).device)
+        else:
+            x = torch.randn(4, 3, 32, 32).to(next(model.parameters()).device)
+    else:
+        raise ValueError("Unsupported dataset")
     y = model(x)
     dot = make_dot(y, params=dict(model.named_parameters()))
     dot.graph_attr.update(dpi="300", size="12,14")

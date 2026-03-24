@@ -8,7 +8,7 @@ from torchmetrics.classification import (
 
 class ClassificationMetrics:
     """
-    Wrapper around TorchMetrics for MNIST classification.
+    Wrapper around TorchMetrics for classification.
     """
     def __init__(self, num_classes, device):
         self.precision = MulticlassPrecision(num_classes=num_classes, average="macro").to(device)

@@ -49,28 +49,39 @@ def get_optimizer(model, params) -> torch.optim.Optimizer:
 
 
 def get_transforms(params, train=True):
+    """
+    Returns data transformations for training or testing.
+
+    Args:
+        params (dict): Configuration parameters.
+        train (bool): Whether to return training transforms.
+
+    Returns:
+        transforms.Compose: Composed transformations.
+    """
     mean, std = params["mean"], params["std"]
 
+    transform_list = []
+
     if params["dataset"] == "mnist":
-        return transforms.Compose([
+        transform_list.extend([
             transforms.ToTensor(),
             transforms.Normalize(mean, std),
         ])
     elif params["dataset"] == "cifar10":
         if train:
-            return transforms.Compose([
+            transform_list.extend([
                 transforms.RandomCrop(32, padding=4),
                 transforms.RandomHorizontalFlip(),
-                transforms.ToTensor(),
-                transforms.Normalize(mean, std),
             ])
-        else:
-            return transforms.Compose([
-                transforms.ToTensor(),
-                transforms.Normalize(mean, std),
-            ])
+        transform_list.extend([
+            transforms.ToTensor(),
+            transforms.Normalize(mean, std),
+        ])
     else:
         return None
+
+    return transforms.Compose(transform_list)
 
 
 def get_loaders(params):
@@ -83,8 +94,8 @@ def get_loaders(params):
 
         full_train = datasets.MNIST(params["data_dir"], train=True, download=True, transform=tf)    # 60000 Data point
 
-        train_size = int(0.83 * len(full_train))    # Approx. 50000 Data point
-        val_size = len(full_train) - train_size     # Approx. 10000 Data point
+        train_size = int(0.83 * len(full_train))    # Approx. 50000 (MNIST) Data point
+        val_size = len(full_train) - train_size     # Approx. 10000 (MNIST) Data point
 
         # random_split randomly divides the dataset while preserving the dataset object.
         train_ds, val_ds = random_split(full_train, [train_size, val_size])
@@ -93,8 +104,8 @@ def get_loaders(params):
         val_tf = get_transforms(params, train=False)
 
         full_train = datasets.CIFAR10(params["data_dir"], train=True, download=True, transform=train_tf)
-        train_size = int(0.83 * len(full_train))
-        val_size = len(full_train) - train_size
+        train_size = int(0.83 * len(full_train))    # Approx. 41500 (CIFAR-10) Data point
+        val_size = len(full_train) - train_size     # Approx. 8500  (CIFAR-10) Data point
         train_ds, _ = random_split(full_train, [train_size, val_size])
 
         full_val = datasets.CIFAR10(params["data_dir"], train=True, download=True, transform=val_tf)

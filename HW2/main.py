@@ -72,7 +72,7 @@ def main():
     logger.info(f"Run parameters:\n{json.dumps(params, indent=4)}")
 
     set_seed(params["seed"])
-    logger.info(f"\nSeed set to: {params['seed']}")
+    logger.info(f"Seed set to: {params['seed']}")
     logger.info(f"Dataset: {params['dataset']}  |  Model: {params['model']}")
 
     device = torch.device(
@@ -85,7 +85,7 @@ def main():
     model = build_model(params).to(device)
     logger.info(model)
 
-    visualize_model(model)
+    visualize_model(model, params)
 
     training_start_time = datetime.now()
     if params["mode"] in ("train", "both"):

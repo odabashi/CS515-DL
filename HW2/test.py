@@ -6,7 +6,7 @@ from train import get_transforms
 from utils import ClassificationMetrics, plot_confusion_matrix, plot_tsne
 
 
-logger = logging.getLogger("HW1")
+logger = logging.getLogger("HW2")
 
 
 @torch.no_grad()
@@ -68,6 +68,7 @@ def run_test(model, params, device):
         logger.info(f"\tClass {i}: {acc:.4f} ({class_correct[i]}/{class_total[i]})")
 
     logger.info("Visualizing Confusion Matrix")
+    logger.info(results["confusion_matrix"])
     plot_confusion_matrix(results["confusion_matrix"])
 
     if params.get("plot_tsne", False):
