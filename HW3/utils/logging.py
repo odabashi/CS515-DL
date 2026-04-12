@@ -1,10 +1,12 @@
 import logging
 import datetime
 import os
+import time
+from functools import wraps
 
 
 def setup_logger():
-    logger = logging.getLogger("HW2")
+    logger = logging.getLogger("HW3")
     formatter = logging.Formatter('%(asctime)s - %(levelname)s: %(message)s',
                                   "%Y-%m-%d %H:%M:%S")
 
@@ -21,3 +23,18 @@ def setup_logger():
     logger.addHandler(file_handler)
 
     logger.setLevel(logging.INFO)
+
+
+def measure_runtime(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        start_time = time.perf_counter()  # More precise for duration than datetime
+
+        result = func(*args, **kwargs)
+
+        end_time = time.perf_counter()
+        duration = end_time - start_time
+        logger = logging.getLogger("HW3")
+        logger.info(f"'{func.__name__}' executed in {duration:.2f}s")
+        return result
+    return wrapper

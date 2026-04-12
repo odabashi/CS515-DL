@@ -8,7 +8,7 @@ import logging
 from sklearn.manifold import TSNE
 
 
-logger = logging.getLogger("HW2")
+logger = logging.getLogger("HW3")
 os.makedirs("./assets/", exist_ok=True)
 
 

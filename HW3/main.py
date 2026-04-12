@@ -4,7 +4,6 @@ import numpy as np
 import torch
 import logging
 import json
-from datetime import datetime
 from parameters import get_params
 from models.pretrained import get_pretrained_model
 from models import MLP, MNIST_CNN, SimpleCNN, VGG, ResNet, BasicResBlock, MobileNetV2
@@ -16,7 +15,7 @@ from utils import visualize_model, setup_logger, compute_flops
 # Fix for macOS SSL certificate verification error when downloading MNIST
 ssl._create_default_https_context = ssl._create_unverified_context
 setup_logger()
-logger = logging.getLogger("HW2")
+logger = logging.getLogger("HW3")
 
 
 def set_seed(seed):
@@ -113,19 +112,11 @@ def main():
 
     visualize_model(model, params)
 
-    training_start_time = datetime.now()
     if params["mode"] in ("train", "both"):
         run_training(model, params, device, teacher_model)
-    training_end_time = datetime.now()
-    training_elapsed = (training_end_time - training_start_time).total_seconds()
-    logger.info(f"Training took {training_elapsed:.2f}s")
 
     if params["mode"] in ("test", "both"):
-        test_start_time = datetime.now()
         run_test(model, params, device)
-        test_end_time = datetime.now()
-        test_elapsed = (test_end_time - test_start_time).total_seconds()
-        logger.info(f"Testing (Together with plotting) took {test_elapsed:.2f}s")
 
 
 if __name__ == "__main__":

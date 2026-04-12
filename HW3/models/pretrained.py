@@ -4,7 +4,7 @@ from typing import Optional
 import logging
 
 
-logger = logging.getLogger("HW2")
+logger = logging.getLogger("HW3")
 
 
 def get_pretrained_model(params: dict, load_default_weights: bool = True, weights: Optional[object] = None):

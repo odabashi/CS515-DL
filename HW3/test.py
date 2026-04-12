@@ -3,12 +3,13 @@ from torch.utils.data import DataLoader
 from torchvision import datasets
 import logging
 from train import get_transforms
-from utils import ClassificationMetrics, plot_confusion_matrix, plot_tsne
+from utils import ClassificationMetrics, plot_confusion_matrix, plot_tsne, measure_runtime
 
 
-logger = logging.getLogger("HW2")
+logger = logging.getLogger("HW3")
 
 
+@measure_runtime
 @torch.no_grad()
 def run_test(model, params, device):
     tf = get_transforms(params, train=False)

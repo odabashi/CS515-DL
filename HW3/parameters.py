@@ -7,7 +7,7 @@ def get_params():
     parser.add_argument("--mode",       choices=["train", "test", "both"], default="both")
     parser.add_argument("--device",     choices=["cpu", "cuda"], type=str,   default="cuda")
     parser.add_argument("--dataset",    choices=["mnist", "cifar10"], default="cifar10")
-    parser.add_argument("--model",      choices=["mlp", "vgg", "resnet", "mobilenet", "cnn"], default="mobilenet")
+    parser.add_argument("--model",      choices=["mlp", "vgg", "resnet", "mobilenet", "cnn"], default="resnet")
     parser.add_argument("--teacher_model", choices=["mlp", "vgg", "resnet", "mobilenet"], default="resnet")
 
     parser.add_argument("--epochs",     type=int,   default=30)
@@ -50,7 +50,7 @@ def get_params():
     # Knowledge Distillation & Label Smoothing
     parser.add_argument("--label_smoothing", type=float, default=0.0,
                         help="Epsilon value for label smoothing (0.0 = disabled)")
-    parser.add_argument("--enable_kd", action=argparse.BooleanOptionalAction, default=True,
+    parser.add_argument("--enable_kd", action=argparse.BooleanOptionalAction, default=False,
                         help="Enable knowledge distillation")
     parser.add_argument("--teacher_model_path", type=str, default="teacher.pth",
                         help="Path to pretrained teacher model")
@@ -58,7 +58,7 @@ def get_params():
                         help="Temperature for KD softening")
     parser.add_argument("--kd_alpha", type=float, default=0.5,
                         help="Weight between CE loss and KD loss")
-    parser.add_argument("--kd_mode", choices=["standard", "custom"], default="custom",
+    parser.add_argument("--kd_mode", choices=["standard", "custom"], default="standard",
                         help="standard: normal KD | custom: teacher-guided label smoothing")
 
     args = parser.parse_args()

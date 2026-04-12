@@ -7,10 +7,10 @@ from torch.utils.data import DataLoader, random_split
 from torchvision import datasets, transforms
 from tqdm import tqdm
 import logging
-from utils import EarlyStopping, plot_learning_curves, ClassificationMetrics
+from utils import EarlyStopping, plot_learning_curves, ClassificationMetrics, measure_runtime
 
 
-logger = logging.getLogger("HW2")
+logger = logging.getLogger("HW3")
 
 
 def kd_loss(student_logits, teacher_logits, temperature):
@@ -257,6 +257,7 @@ def validate(model, loader, criterion, device, params):
     return total_loss / n, correct / n
 
 
+@measure_runtime
 def run_training(model, params, device, teacher_model=None):
     train_loader, val_loader = get_loaders(params)
 
