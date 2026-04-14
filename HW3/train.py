@@ -15,15 +15,18 @@ logger = logging.getLogger("HW3")
 
 def kd_loss(student_logits, teacher_logits, temperature):
     """
-    Knowledge Distillation loss using KL Divergence.
+    Standard Knowledge Distillation loss using KL Divergence.
+    The student is trained to match the soft probability distribution produced by the teacher at temperature T.
+    Scales by T^2 to keep gradient magnitude consistent with the CE term as temperature increases
 
     Args:
-        student_logits: output from student model
-        teacher_logits: output from teacher model
-        temperature: temperature
+        student_logits (torch.Tensor): Raw logits from the student.
+        teacher_logits (torch.Tensor): Raw logits from the teacher.
+        temperature (float): Softening temperature T > 1 spreads the teacher distribution, making it easier for the
+                             student to learn from.
 
     Returns:
-        KD loss (scalar)
+        KD loss (torch.Tensor): Scalar KD loss value.
     """
     student_soft = F.log_softmax(student_logits / temperature, dim=1)
     teacher_soft = F.softmax(teacher_logits / temperature, dim=1)
@@ -33,15 +36,20 @@ def kd_loss(student_logits, teacher_logits, temperature):
 
 def custom_kd_targets(teacher_logits, labels, temperature):
     """
-    Create teacher-guided label smoothing targets.
+    Custom KD mode.
+    Teacher-guided label smoothing: keep teacher confidence on the true class, spread remaining probability
+    uniformly across all other classes.
+
+    The teacher's confidence on the true class is kept as-is, the remaining probability mass is distributed uniformly
+    across all other classes.
 
     Args:
-        teacher_logits: teacher output (before softmax)
-        labels: ground truth labels
-        temperature: temperature
+        teacher_logits (torch.Tensor): Teacher output logits (before softmax)
+        labels (torch.Tensor): Ground-truth integer labels
+        temperature (float): Temperature for softening teacher probs.
 
     Returns:
-        Modified probability distribution
+        torch.Tensor: Soft target probability distribution sums to 1 along dim 1.
     """
     probs = F.softmax(teacher_logits / temperature, dim=1)
 
@@ -66,22 +74,52 @@ def custom_kd_targets(teacher_logits, labels, temperature):
 
 
 def custom_kd_loss(student_logits, teacher_logits, labels, temperature):
+    """
+    Custom KD loss using teacher-guided label smoothing targets.
+
+    Args:
+        student_logits (torch.Tensor): Student logits.
+        teacher_logits (torch.Tensor): Teacher logits.
+        labels (torch.Tensor): Ground-truth labels.
+        temperature (float): Softening temperature.
+
+    Returns:
+        torch.Tensor: Scalar loss value.
+    """
     student_log_probs = F.log_softmax(student_logits / temperature, dim=1)
     target_probs = custom_kd_targets(teacher_logits, labels, temperature)
     return F.kl_div(student_log_probs, target_probs, reduction='batchmean') * (temperature * temperature)
 
 
 def get_optimizer(model, params) -> torch.optim.Optimizer:
+    """
+    Instantiate and return the optimizer specified by params["optimizer"].
+
+    Only parameters with requires_grad=True are passed to the optimizer, so frozen layers (e.g. in transfer-learning
+    or KD setups) are excluded.
+
+    Args:
+        model (nn.Module): Model whose trainable parameters are optimized.
+        params (dict): Configuration dictionary.
+
+    Returns:
+        torch.optim.Optimizer: Configured optimizer instance.
+
+    Raises:
+        ValueError: If params["optimizer"] is not one of {"adam", "sgd", "adamw", "nadam"}.
+    """
+    trainable = filter(lambda p: p.requires_grad, model.parameters())
+
     if params["optimizer"] == "adam":
         optimizer = torch.optim.Adam(
-            filter(lambda p: p.requires_grad, model.parameters()),
+            trainable,
             lr=params["learning_rate"],
             weight_decay=params["weight_decay"]
         )
 
     elif params["optimizer"] == "sgd":
         optimizer = torch.optim.SGD(
-            filter(lambda p: p.requires_grad, model.parameters()),
+            trainable,
             lr=params["learning_rate"],
             momentum=0.9,
             weight_decay=params["weight_decay"]
@@ -89,14 +127,14 @@ def get_optimizer(model, params) -> torch.optim.Optimizer:
 
     elif params["optimizer"] == "adamw":
         optimizer = torch.optim.AdamW(
-            filter(lambda p: p.requires_grad, model.parameters()),
+            trainable,
             lr=params["learning_rate"],
             weight_decay=params["weight_decay"]
         )
 
     elif params["optimizer"] == "nadam":
         optimizer = torch.optim.NAdam(
-            filter(lambda p: p.requires_grad, model.parameters()),
+            trainable,
             lr=params["learning_rate"],
             weight_decay=params["weight_decay"]
         )
@@ -107,7 +145,7 @@ def get_optimizer(model, params) -> torch.optim.Optimizer:
     return optimizer
 
 
-def get_transforms(params, train=True):
+def get_transforms(params, train=True) -> transforms.Compose:
     """
     Returns data transformations for training or testing.
 
@@ -145,7 +183,7 @@ def get_transforms(params, train=True):
             transforms.Normalize(mean, std),
         ])
     else:
-        return None
+        raise ValueError(f"Unsupported dataset: {params['dataset']}")
 
     return transforms.Compose(transform_list)
 
@@ -233,14 +271,32 @@ def train_one_epoch(model, loader, optimizer, criterion, device, params, teacher
     return total_loss / n, correct / n
 
 
-def validate(model, loader, criterion, device, params):
+def validate(model, loader, criterion, device, params) -> Tuple[float, float]:
+    """
+    Evaluate the model on the validation set.
+
+    No augmentation is applied; only CE loss and accuracy are reported.
+    Macro precision, recall, and F1 are logged via ClassificationMetrics.
+
+    Args:
+        model (nn.Module): Model to evaluate.
+        loader (DataLoader): Validation DataLoader.
+        criterion (nn.Module): Loss function (same as training for consistency).
+        device (torch.device): Compute device.
+        params (dict): Configuration dictionary.
+
+    Returns:
+        Tuple[float, float]: (mean_val_loss, val_accuracy).
+    """
     model.eval()
     total_loss, correct, n = 0.0, 0, 0
     val_metrics = ClassificationMetrics(params["num_classes"], device)
     with torch.no_grad():
-        for imgs, labels in loader:
+        for batch in loader:
+            imgs, labels = batch[0], batch[-1]
             imgs, labels = imgs.to(device), labels.to(device)
             out = model(imgs)
+
             loss = criterion(out, labels)
             total_loss += loss.detach().item() * imgs.size(0)
             correct += out.argmax(1).eq(labels).sum().item()
@@ -265,9 +321,7 @@ def run_training(model, params, device, teacher_model=None):
     optimizer = get_optimizer(model, params)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.5)
 
-    early_stopping = None
-    if params["enable_early_stopping"]:
-        early_stopping = EarlyStopping(patience=params["patience"])
+    early_stopping = EarlyStopping(patience=params["patience"]) if params["enable_early_stopping"] else None
 
     best_loss = inf
     best_acc = 0.0
