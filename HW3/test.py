@@ -1,11 +1,15 @@
 from typing import Dict, List
+import os
 import numpy as np
 import torch
+import torch.nn as nn
 from torch.utils.data import DataLoader
+from torchvision import transforms as T
 from torchvision import datasets
 import logging
 from train import get_transforms
 from utils import ClassificationMetrics, plot_confusion_matrix, plot_tsne, measure_runtime
+from data_loaders import Cifar10cDataset, CIFAR_10_C_CORRUPTIONS
 
 
 logger = logging.getLogger("HW3")
@@ -93,8 +97,79 @@ def run_test(model, params, device, teacher_model=None):
         labels_np = torch.cat(all_labels).numpy()
         plot_tsne(logits_np, labels_np)
 
-        logits = torch.cat(all_logits).numpy()
-        labels = torch.cat(all_labels).numpy()
+    if params.get("eval_corrupted", False):
+        logger.info("Evaluating model against CIFAR-10-C corrupted images...")
+        corruption_results = run_corrupted_test(model, params, device)
 
-        plot_tsne(logits, labels)
+
+def run_corrupted_test(model, params, device) -> Dict[str, float]:
+    """
+    Evaluate the model on the full CIFAR-10-C benchmark.
+
+    Iterates over all 19 corruption types and records accuracy for each type. Logs a summary table and computes the
+    mean corruption accuracy (mCA) and mean corruption error (mCE) averaged across all corruptions.
+
+    Args:
+        model (nn.Module): Trained model. Expected to already be on `device` and in eval mode.
+        params (dict): Configuration dictionary.
+        device (torch.device): Compute device.
+
+    Returns:
+        Dict[str, float]: Nested dict results[corruption_name] = accuracy.
+
+    Raises:
+        FileNotFoundError: Propagated from Cifar10cDataset if the CIFAR-10-C directory or any `.npy` file is missing.
+    """
+    cifar10c_dir = params["cifar10c_dir"]
+
+    if not os.path.isdir(cifar10c_dir):
+        raise FileNotFoundError(
+            f"CIFAR-10-C directory not found: {cifar10c_dir}\n Download from https://zenodo.org/record/2535967 and "
+            f"extract there."
+        )
+
+    # Only `ToTensor` + `Normalize` transforms are applied (no augmentation) to match the original benchmark protocol
+    tf = T.Compose([
+        T.ToTensor(),
+        T.Normalize(params["mean"], params["std"]),
+    ])
+
+    model.eval()
+
+    results: Dict[str, float] = {}
+    all_accuracies: List[float] = []  # flat list for global mCA
+
+    logger.info("\n====== CIFAR-10-C Corruption Evaluation ======")
+    logger.info(f"{'Corruption':<20} " + "  Mean")
+    logger.info("-" * 30)
+
+    for corruption in CIFAR_10_C_CORRUPTIONS:
+        ds = Cifar10cDataset(
+            data_dir=cifar10c_dir,
+            corruption=corruption,
+            severity=-1,
+            transform=tf,
+        )
+        data_loader = DataLoader(
+            ds,
+            batch_size=params["batch_size"],
+            shuffle=False,
+            num_workers=params["num_workers"],
+        )
+        _, _, correct, n, _, _, _ = run_eval(model, data_loader, params["num_classes"], device)
+        single_corruption_accuracy = (correct / n)
+        results[corruption] = single_corruption_accuracy
+        all_accuracies.append(single_corruption_accuracy)
+
+        logger.info(f"{corruption:<20}  {single_corruption_accuracy:.4f}")
+
+    mCA = float(np.mean(all_accuracies))  # mean corruption accuracy
+    mCE = 1.0 - mCA  # mean corruption error
+
+    logger.info("=" * 30)
+    logger.info(f"Mean Corruption Accuracy (mCA): {mCA:.4f}")
+    logger.info(f"Mean Corruption Error    (mCE): {mCE:.4f}")
+    logger.info("=" * 30)
+
+    return results
 
