@@ -2,6 +2,7 @@ from utils.early_stopping import EarlyStopping
 from utils.visualization import plot_confusion_matrix, plot_learning_curves, visualize_model, plot_tsne
 from utils.evaluation import ClassificationMetrics, compute_flops
 from utils.logging import setup_logger, measure_runtime
+from utils.attacks import pgd_l2_attack, pgd_linf_attack
 
 __all__ = [
     "EarlyStopping",
@@ -12,5 +13,7 @@ __all__ = [
     "visualize_model",
     "setup_logger",
     "measure_runtime",
-    "plot_tsne"
+    "plot_tsne",
+    "pgd_l2_attack",
+    "pgd_linf_attack",
 ]
