@@ -1,7 +1,9 @@
 import random
 import ssl
+from typing import Optional
 import numpy as np
 import torch
+import torch.nn as nn
 import logging
 import json
 from parameters import get_params
@@ -19,6 +21,12 @@ logger = logging.getLogger("HW3")
 
 
 def set_seed(seed):
+    """
+    Fix all random seeds for reproducibility across Python, NumPy, and PyTorch.
+
+    Args:
+        seed (int): Seed value applied to all RNG sources.
+    """
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -27,11 +35,22 @@ def set_seed(seed):
     torch.backends.cudnn.benchmark = False
 
 
-def build_model(params, teacher_model=False):
-    if teacher_model:
-        model_name = params["teacher_model"]
-    else:
-        model_name = params["model"]
+def build_model(params, teacher_model=False) -> nn.Module:
+    """
+    Instantiate the model specified in `params` (no weights loaded).
+
+    Args:
+        params (dict): Configuration dictionary (see `parameters.py`).
+        teacher_model (bool): If True, use `params["teacher_model"]` as the architecture key; otherwise use
+                              `params["model"]`.
+
+    Returns:
+        nn.Module: Randomly initialized model instance.
+
+    Raises:
+        ValueError: Unknown model name or architecture/dataset mismatch.
+    """
+    model_name = params["teacher_model"] if teacher_model else params["model"]
     dataset = params["dataset"]
 
     if model_name == "mlp":
@@ -84,10 +103,11 @@ def main():
     )
     logger.info(f"Using device: {device}")
 
-    teacher_model = None
+    teacher_model: Optional[nn.Module] = None
 
-    if params["enable_kd"]:
-        assert params["teacher_model_path"] is not None, "Teacher model path must be provided for KD"
+    if params["enable_kd"] or params["eval_transfer"]:
+        assert params["teacher_model_path"] is not None, ("Teacher model path must be provided when using Knowledge "
+                                                          "Distillation or evaluating Transferability")
 
         teacher_model = build_model(params, teacher_model=True).to(device)
         teacher_model.load_state_dict(torch.load(params["teacher_model_path"], map_location=device))
@@ -116,7 +136,7 @@ def main():
         run_training(model, params, device, teacher_model)
 
     if params["mode"] in ("test", "both"):
-        run_test(model, params, device)
+        run_test(model, params, device, teacher_model=teacher_model)
 
 
 if __name__ == "__main__":
