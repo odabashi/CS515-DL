@@ -2,6 +2,23 @@ import argparse
 
 
 def get_params():
+    """
+    Parse and return all command-line arguments as a configuration dictionary.
+
+    Covers:
+        - Dataset and model selection
+        - Training hyperparameters (optimizer, LR, batch size, epochs)
+        - Regularization (dropout, batch norm, L1, weight decay, label smoothing)
+        - Transfer learning flags
+        - Knowledge distillation flags
+        - AugMix augmentation
+        - CIFAR-10-C corruption evaluation
+        - PGD adversarial evaluation
+        - Grad-CAM visualization
+
+    Returns:
+        dict: Flat configuration dictionary consumed by the main function.
+    """
     parser = argparse.ArgumentParser(description="Deep Learning on MNIST / CIFAR-10")
 
     parser.add_argument("--mode",       choices=["train", "test", "both"], default="both")
@@ -41,6 +58,8 @@ def get_params():
                         help="Number of blocks per ResNet layer (default: 2 2 2 2 = ResNet-18)")
 
     parser.add_argument('--plot_tsne', action=argparse.BooleanOptionalAction, default=True)
+    # parser.add_argument("--tsne_adv", action=argparse.BooleanOptionalAction, default=False,
+    #                     help="Overlay adversarial samples on t-SNE plot")
 
     # Transfer Learning
     parser.add_argument("--pretrained", action=argparse.BooleanOptionalAction, default=False)
@@ -60,6 +79,50 @@ def get_params():
                         help="Weight between CE loss and KD loss")
     parser.add_argument("--kd_mode", choices=["standard", "custom"], default="standard",
                         help="standard: normal KD | custom: teacher-guided label smoothing")
+
+    # CIFAR-10-C Corruption Evaluation
+    parser.add_argument("--eval_corrupted", action=argparse.BooleanOptionalAction, default=False,
+                        help="Evaluate model on CIFAR-10-C corrupted test set")
+    parser.add_argument("--cifar10c_dir", type=str, default="./data/CIFAR-10-C",
+                        help="Path to directory containing CIFAR-10-C .npy files")
+
+    # AugMix
+    parser.add_argument("--augmix", action=argparse.BooleanOptionalAction, default=False,
+                        help="Enable AugMix augmentation during training")
+    parser.add_argument("--augmix_jsd", action=argparse.BooleanOptionalAction, default=False,
+                        help="Enable Jensen-Shannon divergence consistency loss (full AugMix)")
+    parser.add_argument("--augmix_severity", type=int, default=3,
+                        help="AugMix severity level (1-10, default 3)")
+    parser.add_argument("--augmix_mixture_width", type=int, default=3,
+                        help="Number of augmentation chains mixed in AugMix")
+    parser.add_argument("--jsd_lambda", type=float, default=1.0,
+                        help="Weight for the JSD consistency loss term (default 1.0)")
+
+    # PGD adversarial evaluation
+    parser.add_argument("--pgd_eval", action=argparse.BooleanOptionalAction, default=False,
+                        help="Run PGD adversarial robustness evaluation")
+    parser.add_argument("--pgd_steps", type=int, default=20,
+                        help="Number of PGD attack steps (default 20 -> PGD-20)")
+    parser.add_argument("--pgd_eps_linf", type=float, default=8/255,
+                        help="L-inf epsilon for PGD attack (default 4/255)")
+    parser.add_argument("--pgd_eps_l2", type=float, default=0.5,
+                        help="L2 epsilon for PGD attack (default 0.25)")
+    parser.add_argument("--pgd_alpha_linf", type=float, default=1/255,
+                        help="Step size for L-inf PGD (default 1/255)")
+    parser.add_argument("--pgd_alpha_l2", type=float, default=0.05,
+                        help="Step size for L2 PGD (default 0.05)")
+
+    # Adversarial transferability
+    parser.add_argument("--eval_transfer", action=argparse.BooleanOptionalAction, default=False,
+                        help="Evaluate transferability: attack teacher, test on student")
+    parser.add_argument("--student_model_path", type=str, default="student.pth",
+                        help="Path to trained student model weights")
+
+    # GradCam
+    parser.add_argument("--gradcam_eval", action=argparse.BooleanOptionalAction, default=False,
+                        help="Generate Grad-CAM visualisations for adversarial samples")
+    parser.add_argument("--gradcam_num_samples", type=int, default=2,
+                        help="Number of misclassified adversarial samples to visualise")
 
     args = parser.parse_args()
 
@@ -102,13 +165,13 @@ def get_params():
         "resize_input":             args.resize_input,
 
         # Knowledge distillation & Label smoothing
-        "teacher_model": args.teacher_model,
-        "label_smoothing": args.label_smoothing,
-        "enable_kd": args.enable_kd,
-        "teacher_model_path": args.teacher_model_path,
-        "kd_temperature": args.kd_temperature,
-        "kd_alpha": args.kd_alpha,
-        "kd_mode": args.kd_mode,
+        "teacher_model":            args.teacher_model,
+        "label_smoothing":          args.label_smoothing,
+        "enable_kd":                args.enable_kd,
+        "teacher_model_path":       args.teacher_model_path,
+        "kd_temperature":           args.kd_temperature,
+        "kd_alpha":                 args.kd_alpha,
+        "kd_mode":                  args.kd_mode,
 
         # Training
         "epochs":                   args.epochs,
@@ -120,12 +183,40 @@ def get_params():
         "l1_lambda":                args.l1_lambda,
         "weight_decay":             args.weight_decay,
 
+        # CIFAR - 10 - C
+        "eval_corrupted":           args.eval_corrupted,
+        "cifar10c_dir":             args.cifar10c_dir,
+
+        # AugMix
+        "augmix":                   args.augmix,
+        "augmix_jsd":               args.augmix_jsd,
+        "augmix_severity":          args.augmix_severity,
+        "augmix_mixture_width":     args.augmix_mixture_width,
+        "jsd_lambda":               args.jsd_lambda,
+
+        # PGD
+        "pgd_eval":                 args.pgd_eval,
+        "pgd_steps":                args.pgd_steps,
+        "pgd_eps_linf":             args.pgd_eps_linf,
+        "pgd_eps_l2":               args.pgd_eps_l2,
+        "pgd_alpha_linf":           args.pgd_alpha_linf,
+        "pgd_alpha_l2":             args.pgd_alpha_l2,
+
+        # Transferability
+        "eval_transfer":            args.eval_transfer,
+        "student_model_path":       args.student_model_path,
+
+        # Grad-CAM
+        "gradcam_eval":             args.gradcam_eval,
+        "gradcam_num_samples":      args.gradcam_num_samples,
+
         # Misc
         "seed":                     42,
         "device":                   args.device,
         "save_path":                "best_model.pth",
         "log_interval":             100,                # print every N batches
         "plot_tsne":                args.plot_tsne,
+        # "tsne_adv":               args.tsne_adv,
 
         # CLI
         "mode":                     args.mode,
