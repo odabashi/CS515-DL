@@ -1,3 +1,5 @@
+from typing import Dict, List
+import numpy as np
 import torch
 from torch.utils.data import DataLoader
 from torchvision import datasets
@@ -9,9 +11,7 @@ from utils import ClassificationMetrics, plot_confusion_matrix, plot_tsne, measu
 logger = logging.getLogger("HW3")
 
 
-@measure_runtime
-@torch.no_grad()
-def run_test(model, params, device):
+def get_test_data_loader(params):
     tf = get_transforms(params, train=False)
 
     if params["dataset"] == "mnist":
@@ -21,7 +21,45 @@ def run_test(model, params, device):
     else:
         test_ds = None
 
-    loader = DataLoader(test_ds, batch_size=params["batch_size"], shuffle=False, num_workers=params["num_workers"])
+    return DataLoader(test_ds, batch_size=params["batch_size"], shuffle=False, num_workers=params["num_workers"])
+
+
+def run_eval(model, data_loader, num_classes, device, metrics=None):
+    correct, n = 0, 0
+    class_correct = [0] * num_classes
+    class_total = [0] * num_classes
+
+    all_logits = []
+    all_labels = []
+    with torch.no_grad():
+        for imgs, labels in data_loader:
+            imgs, labels = imgs.to(device), labels.to(device)
+
+            logits = model(imgs)
+            preds = torch.argmax(logits, dim=1)
+
+            # Save for t-SNE
+            all_logits.append(logits.detach().cpu())
+            all_labels.append(labels.detach().cpu())
+
+            # Calculate Support
+            correct += preds.eq(labels).sum().item()
+            n += imgs.size(0)
+            for p, t in zip(preds, labels):
+                class_correct[t] += (p == t).item()
+                class_total[t] += 1
+
+            if metrics:
+                # Calculate Evaluation Scores
+                metrics.update(preds, labels)
+
+    return class_correct, class_total, correct, n, all_logits, all_labels, metrics
+
+
+@measure_runtime
+@torch.no_grad()
+def run_test(model, params, device, teacher_model=None):
+    data_loader = get_test_data_loader(params)
 
     # Load best weights
     model.load_state_dict(torch.load(params["save_path"], map_location=device))
@@ -29,32 +67,9 @@ def run_test(model, params, device):
 
     metrics = ClassificationMetrics(params["num_classes"], device)
 
-    correct, n = 0, 0
-    class_correct = [0] * params["num_classes"]
-    class_total = [0] * params["num_classes"]
-
-    all_logits = []
-    all_labels = []
-
-    for imgs, labels in loader:
-        imgs, labels = imgs.to(device), labels.to(device)
-
-        logits = model(imgs)
-        preds = torch.argmax(logits, dim=1)
-
-        # Save for t-SNE
-        all_logits.append(logits.detach().cpu())
-        all_labels.append(labels.detach().cpu())
-
-        # Calculate Support
-        correct += preds.eq(labels).sum().item()
-        n += imgs.size(0)
-        for p, t in zip(preds, labels):
-            class_correct[t] += (p == t).item()
-            class_total[t] += 1
-
-        # Calculate Evaluation Scores
-        metrics.update(preds, labels)
+    class_correct, class_total, correct, n, all_logits, all_labels, metrics = run_eval(model, data_loader,
+                                                                                       params["num_classes"], device,
+                                                                                       metrics)
 
     results = metrics.compute()
 
@@ -74,6 +89,9 @@ def run_test(model, params, device):
 
     if params.get("plot_tsne", False):
         logger.info("Generating t-SNE visualization...")
+        logits_np = torch.cat(all_logits).numpy()
+        labels_np = torch.cat(all_labels).numpy()
+        plot_tsne(logits_np, labels_np)
 
         logits = torch.cat(all_logits).numpy()
         labels = torch.cat(all_labels).numpy()
