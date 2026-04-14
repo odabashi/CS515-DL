@@ -21,7 +21,7 @@ def get_params():
     """
     parser = argparse.ArgumentParser(description="Deep Learning on MNIST / CIFAR-10")
 
-    parser.add_argument("--mode",       choices=["train", "test", "both"], default="both")
+    parser.add_argument("--mode",       choices=["train", "test", "both"], default="test")
     parser.add_argument("--device",     choices=["cpu", "cuda"], type=str,   default="cuda")
     parser.add_argument("--dataset",    choices=["mnist", "cifar10"], default="cifar10")
     parser.add_argument("--model",      choices=["mlp", "vgg", "resnet", "mobilenet", "cnn"], default="resnet")
@@ -81,15 +81,15 @@ def get_params():
                         help="standard: normal KD | custom: teacher-guided label smoothing")
 
     # CIFAR-10-C Corruption Evaluation
-    parser.add_argument("--eval_corrupted", action=argparse.BooleanOptionalAction, default=False,
+    parser.add_argument("--eval_corrupted", action=argparse.BooleanOptionalAction, default=True,
                         help="Evaluate model on CIFAR-10-C corrupted test set")
     parser.add_argument("--cifar10c_dir", type=str, default="./data/CIFAR-10-C",
                         help="Path to directory containing CIFAR-10-C .npy files")
 
     # AugMix
-    parser.add_argument("--augmix", action=argparse.BooleanOptionalAction, default=False,
+    parser.add_argument("--enable_augmix", action=argparse.BooleanOptionalAction, default=False,
                         help="Enable AugMix augmentation during training")
-    parser.add_argument("--augmix_jsd", action=argparse.BooleanOptionalAction, default=False,
+    parser.add_argument("--enable_augmix_jsd", action=argparse.BooleanOptionalAction, default=False,
                         help="Enable Jensen-Shannon divergence consistency loss (full AugMix)")
     parser.add_argument("--augmix_severity", type=int, default=3,
                         help="AugMix severity level (1-10, default 3)")
@@ -103,9 +103,9 @@ def get_params():
                         help="Run PGD adversarial robustness evaluation")
     parser.add_argument("--pgd_steps", type=int, default=20,
                         help="Number of PGD attack steps (default 20 -> PGD-20)")
-    parser.add_argument("--pgd_eps_linf", type=float, default=8/255,
+    parser.add_argument("--pgd_eps_linf", type=float, default=4/255,
                         help="L-inf epsilon for PGD attack (default 4/255)")
-    parser.add_argument("--pgd_eps_l2", type=float, default=0.5,
+    parser.add_argument("--pgd_eps_l2", type=float, default=0.25,
                         help="L2 epsilon for PGD attack (default 0.25)")
     parser.add_argument("--pgd_alpha_linf", type=float, default=1/255,
                         help="Step size for L-inf PGD (default 1/255)")
@@ -188,8 +188,8 @@ def get_params():
         "cifar10c_dir":             args.cifar10c_dir,
 
         # AugMix
-        "augmix":                   args.augmix,
-        "augmix_jsd":               args.augmix_jsd,
+        "enable_augmix":            args.enable_augmix,
+        "enable_augmix_jsd":        args.enable_augmix_jsd,
         "augmix_severity":          args.augmix_severity,
         "augmix_mixture_width":     args.augmix_mixture_width,
         "jsd_lambda":               args.jsd_lambda,

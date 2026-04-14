@@ -140,7 +140,7 @@ def run_corrupted_test(model, params, device) -> Dict[str, float]:
     all_accuracies: List[float] = []  # flat list for global mCA
 
     logger.info("\n====== CIFAR-10-C Corruption Evaluation ======")
-    logger.info(f"{'Corruption':<20} " + "  Mean")
+    logger.info(f"{'Corruption':<20} " + "  Accuracy")
     logger.info("-" * 30)
 
     for corruption in CIFAR_10_C_CORRUPTIONS:
