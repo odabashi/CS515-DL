@@ -21,7 +21,7 @@ def get_params():
     """
     parser = argparse.ArgumentParser(description="Deep Learning on MNIST / CIFAR-10")
 
-    parser.add_argument("--mode",       choices=["train", "test", "both"], default="test")
+    parser.add_argument("--mode",       choices=["train", "test", "both"], default="both")
     parser.add_argument("--device",     choices=["cpu", "cuda"], type=str,   default="cuda")
     parser.add_argument("--dataset",    choices=["mnist", "cifar10"], default="cifar10")
     parser.add_argument("--model",      choices=["mlp", "vgg", "resnet", "mobilenet", "cnn"], default="resnet")
@@ -89,14 +89,14 @@ def get_params():
     # AugMix
     parser.add_argument("--enable_augmix", action=argparse.BooleanOptionalAction, default=False,
                         help="Enable AugMix augmentation during training")
-    parser.add_argument("--enable_augmix_jsd", action=argparse.BooleanOptionalAction, default=False,
+    parser.add_argument("--enable_augmix_jsd", action=argparse.BooleanOptionalAction, default=True,
                         help="Enable Jensen-Shannon divergence consistency loss (full AugMix)")
     parser.add_argument("--augmix_severity", type=int, default=3,
                         help="AugMix severity level (1-10, default 3)")
     parser.add_argument("--augmix_mixture_width", type=int, default=3,
                         help="Number of augmentation chains mixed in AugMix")
-    parser.add_argument("--jsd_lambda", type=float, default=1.0,
-                        help="Weight for the JSD consistency loss term (default 1.0)")
+    parser.add_argument("--jsd_lambda", type=float, default=12.0,
+                        help="Weight for the JSD consistency loss term (default 12.0)")
 
     # PGD adversarial evaluation
     parser.add_argument("--pgd_eval", action=argparse.BooleanOptionalAction, default=False,

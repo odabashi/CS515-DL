@@ -1,5 +1,6 @@
 import copy
 from math import inf
+from typing import Tuple
 import torch.nn.functional as F
 import torch
 import torch.nn as nn
@@ -8,6 +9,7 @@ from torchvision import datasets, transforms
 from tqdm import tqdm
 import logging
 from utils import EarlyStopping, plot_learning_curves, ClassificationMetrics, measure_runtime
+from data_loaders import AugMixDataset, build_augmix_transforms
 
 
 logger = logging.getLogger("HW3")
@@ -91,6 +93,41 @@ def custom_kd_loss(student_logits, teacher_logits, labels, temperature):
     return F.kl_div(student_log_probs, target_probs, reduction='batchmean') * (temperature * temperature)
 
 
+def jsd_loss(p_clean, p_aug1, p_aug2) -> torch.Tensor:
+    """
+    Three-way (Across three views) Jensen-Shannon Divergence consistency loss.
+
+    Used in the full AugMix objective to encourage the model to produce consistent predictions for a clean image
+    and two independently augmented versions of the same image.
+    Measures prediction inconsistency across a clean image and two AugMix views.
+
+    Defined in the AugMix paper as:
+        M   = (p_clean + p_aug1 + p_aug2) / 3
+        JSD = (1/3) * [KL(p_clean||M) + KL(p_aug1||M) + KL(p_aug2||M)]
+
+    --------------------------------
+    F.kl_div(input, target) computes KL(target || input), i.e. it expects
+    input=log(Q) and target=P and returns sum(P * (log P - log Q)).
+
+    To compute KL(p || M) we therefore pass input=log(M), target=p:
+        F.kl_div(M.log(), p, reduction="batchmean")
+        -> sum(p * (log p - log M))  =  KL(p || M)  (correct)
+
+    Args:
+        p_clean (torch.Tensor): Softmax probabilities for clean images.
+        p_aug1  (torch.Tensor): Softmax probabilities for AugMix view 1.
+        p_aug2  (torch.Tensor): Softmax probabilities for AugMix view 2.
+
+    Returns:
+        torch.Tensor: Scalar mean JSD value in [0, log(3)].
+    """
+    M = (p_clean + p_aug1 + p_aug2) / 3.0
+    log_M = torch.log(M + 1e-8)
+
+    kl = lambda p: F.kl_div(log_M, p, reduction="batchmean")
+    return (kl(p_clean) + kl(p_aug1) + kl(p_aug2)) / 3.0
+
+
 def get_optimizer(model, params) -> torch.optim.Optimizer:
     """
     Instantiate and return the optimizer specified by params["optimizer"].
@@ -147,11 +184,15 @@ def get_optimizer(model, params) -> torch.optim.Optimizer:
 
 def get_transforms(params, train=True) -> transforms.Compose:
     """
-    Returns data transformations for training or testing.
+    Returns torchvision transform pipeline for training or testing data.
+
+    When AugMix is enabled, transforms.AugMix is inserted before ToTensor (it expects a PIL image).
+
+    For validation / test only ToTensor + Normalize are applied (no stochastic augmentation).
 
     Args:
         params (dict): Configuration parameters.
-        train (bool): Whether to return training transforms.
+        train (bool): If True, include training-time augmentations. If False, return deterministic transforms only.
 
     Returns:
         transforms.Compose: Composed transformations.
@@ -178,6 +219,19 @@ def get_transforms(params, train=True) -> transforms.Compose:
                 transforms.RandomCrop(32, padding=4),
                 transforms.RandomHorizontalFlip(),
             ])
+
+            # AugMix expects a PIL image, so it goes before ToTensor
+            if params["enable_augmix"]:
+                transform_list.append(
+                    transforms.AugMix(
+                        severity=params.get("augmix_severity", 3),
+                        mixture_width=params.get("augmix_mixture_width", 3),
+                        chain_depth=-1
+                    )
+                )
+                logger.info(f"AugMix enabled where severity={params['augmix_severity']} and "
+                            f"mixture_width={params['augmix_mixture_width']}")
+
         transform_list.extend([
             transforms.ToTensor(),
             transforms.Normalize(mean, std),
@@ -189,55 +243,147 @@ def get_transforms(params, train=True) -> transforms.Compose:
 
 
 def get_loaders(params):
-    tf = get_transforms(params)
+    """
+    Build and return train and validation DataLoaders by splitting the training set into train and validation.
+    Importantly, separate transform pipelines are applied: the train split gets augmentation while
+    the val split gets only normalization, avoiding data-leakage in validation metrics.
+
+    Args:
+        params (dict): Configuration dictionary.
+
+    Returns:
+        Tuple[DataLoader, DataLoader]: (train_loader, val_loader).
+
+    Raises:
+        ValueError: If params["dataset"] is not supported.
+    """
+
+    def make_generator():
+        """Generator seed ensures train/val indices are identical across the two dataset objects (raw and
+        val-transformed)"""
+        return torch.Generator().manual_seed(42)
+
+    TRAIN_RATIO = 0.83
 
     if params["dataset"] == "mnist":
+        tf = get_transforms(params)
         # # IMPORTANT: This is wrong approach to use the test set as a validation set. This would lead to data leakage.
         # train_ds = datasets.MNIST(params["data_dir"], train=True,  download=True, transform=tf)
         # val_ds   = datasets.MNIST(params["data_dir"], train=False, download=True, transform=tf)
 
         full_train = datasets.MNIST(params["data_dir"], train=True, download=True, transform=tf)    # 60000 Data point
 
-        train_size = int(0.83 * len(full_train))    # Approx. 50000 (MNIST) Data point
+        train_size = int(TRAIN_RATIO * len(full_train))    # Approx. 50000 (MNIST) Data point
         val_size = len(full_train) - train_size     # Approx. 10000 (MNIST) Data point
 
-        # random_split randomly divides the dataset while preserving the dataset object.
+        # random_split randomly divides the dataset while preserving  the dataset object.
         train_ds, val_ds = random_split(full_train, [train_size, val_size])
     elif params["dataset"] == "cifar10":
-        train_tf = get_transforms(params, train=True)
+        full_size = len(datasets.CIFAR10(params["data_dir"], train=True, download=True))
+        train_size = int(TRAIN_RATIO * full_size)    # Approx. 41500 (CIFAR-10) Data point
+        val_size = full_size - train_size     # Approx. 8500  (CIFAR-10) Data point
+
+        if params["enable_augmix_jsd"]:
+            # Full AugMix path (Computing JSD): AugMix requires to load raw PIL images with no transform
+            base_raw = datasets.CIFAR10(
+                params["data_dir"], train=True, download=True, transform=None
+            )
+            train_subset_raw, _ = random_split(base_raw, [train_size, val_size], generator=make_generator())
+
+            preprocess, augmix_preprocess = build_augmix_transforms(
+                mean=params["mean"],
+                std=params["std"],
+                severity=params.get("augmix_severity", 3),
+                mixture_width=params.get("augmix_mixture_width", 3),
+            )
+            train_ds = AugMixDataset(train_subset_raw, preprocess, augmix_preprocess)
+            logger.info(f"AugMix enabled where severity={params['augmix_severity']} and "
+                        f"mixture_width={params['augmix_mixture_width']}")
+        else:
+            # Standard path: transformed dataset, same split indices
+            train_tf = get_transforms(params, train=True)
+            full_train = datasets.CIFAR10(params["data_dir"], train=True, download=True, transform=train_tf)
+            train_ds, _ = random_split(full_train, [train_size, val_size], generator=make_generator())
+
+        # Validation always uses clean transforms
         val_tf = get_transforms(params, train=False)
-
-        full_train = datasets.CIFAR10(params["data_dir"], train=True, download=True, transform=train_tf)
-        train_size = int(0.83 * len(full_train))    # Approx. 41500 (CIFAR-10) Data point
-        val_size = len(full_train) - train_size     # Approx. 8500  (CIFAR-10) Data point
-        train_ds, _ = random_split(full_train, [train_size, val_size])
-
         full_val = datasets.CIFAR10(params["data_dir"], train=True, download=True, transform=val_tf)
-        _, val_ds = random_split(full_val, [train_size, val_size])
+        _, val_ds = random_split(full_val, [train_size, val_size], generator=make_generator())
     else:
-        train_ds, val_ds = None, None
+        raise ValueError(f"Unsupported dataset: {params['dataset']}")
 
     train_loader = DataLoader(train_ds, batch_size=params["batch_size"], shuffle=True,
                               num_workers=params["num_workers"])
-    val_loader = DataLoader(val_ds, batch_size=params["batch_size"], shuffle=True, num_workers=params["num_workers"])
+    val_loader = DataLoader(val_ds, batch_size=params["batch_size"], shuffle=False, num_workers=params["num_workers"])
     return train_loader, val_loader
 
 
 def train_one_epoch(model, loader, optimizer, criterion, device, params, teacher_model=None):
+    """
+    Run one full training epoch.
+
+    Batch format detection
+    ----------------------
+    The function inspects len(batch) at runtime:
+
+        len(batch) == 2  ->  standard (imgs, labels)
+        len(batch) == 4  ->  Full AugMix with JSD (clean, aug1, aug2, labels)
+
+    This avoids extra flags and keeps the DataLoader as the single source of truth about which mode is active.
+
+    Loss composition
+    ----------------
+        loss = CE_or_CutMix
+             + (optional) KD term (if teacher_model is provided and Knowledge distillation is enabled)
+             + (optional) AugMix JSD term (if Full AugMix with JSD is enabled)
+             + (optional) L1 regularization
+
+    The JSD term reuses the clean forward pass output (detached) to avoid an extra forward pass.
+
+    Args:
+        model (nn.Module): Model in training mode.
+        loader (DataLoader): Train loader (2-tuple or 4-tuple batches).
+        optimizer (Optimizer): Configured optimizer.
+        criterion (nn.Module): Base Cross-Entropy loss.
+        device (torch.device): Compute device.
+        params (dict): Configuration dictionary.
+        teacher_model (optional): Frozen teacher for knowledge distillation.
+
+    Returns:
+        Tuple[float, float]: (mean_loss, accuracy) over the epoch.
+    """
     model.train()
     total_loss, correct, n = 0.0, 0, 0
-    for batch_idx, (imgs, labels) in enumerate(tqdm(loader, desc="Training")):
-        imgs, labels = imgs.to(device), labels.to(device)
+
+    use_kd = params.get("enable_kd") and teacher_model is not None
+
+    for batch_idx, batch in enumerate(tqdm(loader, desc="Training")):
+        # 4-tuple for AugMix+JSD, 2-tuple otherwise
+        if len(batch) == 4:
+            imgs_clean, imgs_aug1, imgs_aug2, labels = batch
+            imgs_clean = imgs_clean.to(device)
+            imgs_aug1 = imgs_aug1.to(device)
+            imgs_aug2 = imgs_aug2.to(device)
+            labels = labels.to(device)
+            use_jsd = True
+        else:
+            imgs_clean, labels = batch
+            imgs_clean = imgs_clean.to(device)
+            labels = labels.to(device)
+            imgs_aug1 = imgs_aug2 = None
+            use_jsd = False
 
         optimizer.zero_grad()
-        out = model(imgs)
+
+        # Forward pass
+        out = model(imgs_clean)
 
         # Standard CE loss
         ce_loss = criterion(out, labels)
 
-        if params["enable_kd"]:
+        if use_kd:
             with torch.no_grad():
-                teacher_out = teacher_model(imgs)
+                teacher_out = teacher_model(imgs_clean)
 
             if params["kd_mode"] == "standard":
                 kd = kd_loss(out, teacher_out, params["kd_temperature"])
@@ -250,19 +396,26 @@ def train_one_epoch(model, loader, optimizer, criterion, device, params, teacher
         else:
             loss = ce_loss
 
-        # L1 Regularization
-        l1_lambda = params["l1_lambda"]
+        # AugMix JSD Consistency
+        if use_jsd:
+            with torch.no_grad():
+                p_aug1 = F.softmax(model(imgs_aug1), dim=1)
+                p_aug2 = F.softmax(model(imgs_aug2), dim=1)
+            p_clean = F.softmax(out.detach(), dim=1)
+            jsd_term = jsd_loss(p_clean, p_aug1, p_aug2)
+            loss = loss + params["jsd_lambda"] * jsd_term
 
-        if l1_lambda > 0:
+        # L1 Regularization
+        if params["l1_lambda"] > 0:
             l1_norm = sum(p.abs().sum() for p in model.parameters())
-            loss = loss + l1_lambda * l1_norm
+            loss = loss + params["l1_lambda"] * l1_norm
 
         loss.backward()
         optimizer.step()
 
-        total_loss += loss.detach().item() * imgs.size(0)
+        total_loss += loss.detach().item() * imgs_clean.size(0)
         correct += out.argmax(1).eq(labels).sum().item()
-        n += imgs.size(0)
+        n += imgs_clean.size(0)
 
         # if (batch_idx + 1) % params["log_interval"] == 0:
         #     print(f"  [{batch_idx+1}/{len(loader)}] "
