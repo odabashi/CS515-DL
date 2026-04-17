@@ -57,9 +57,9 @@ def get_params():
                         metavar=("L1", "L2", "L3", "L4"),
                         help="Number of blocks per ResNet layer (default: 2 2 2 2 = ResNet-18)")
 
-    parser.add_argument('--plot_tsne', action=argparse.BooleanOptionalAction, default=True)
-    # parser.add_argument("--tsne_adv", action=argparse.BooleanOptionalAction, default=False,
-    #                     help="Overlay adversarial samples on t-SNE plot")
+    parser.add_argument('--plot_tsne', action=argparse.BooleanOptionalAction, default=False)
+    parser.add_argument("--tsne_adv", action=argparse.BooleanOptionalAction, default=True,
+                        help="Overlay adversarial samples on t-SNE plot")
 
     # Transfer Learning
     parser.add_argument("--pretrained", action=argparse.BooleanOptionalAction, default=False)

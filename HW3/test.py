@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Any
 import os
 import numpy as np
 import torch
@@ -9,7 +9,7 @@ from torchvision import datasets
 import logging
 from train import get_transforms
 from utils import (ClassificationMetrics, plot_confusion_matrix, plot_tsne, measure_runtime, pgd_l2_attack,
-                   pgd_linf_attack)
+                   pgd_linf_attack, plot_tsne_adversarial)
 from data_loaders import Cifar10cDataset, CIFAR_10_C_CORRUPTIONS
 
 
@@ -105,6 +105,21 @@ def run_test(model, params, device, teacher_model=None):
         logger.info("Evaluating model robustness under PGD attack...")
         pgd_results = run_pgd_eval(model, params, device)
 
+        if params.get("tsne_adv", False):
+            if pgd_results is not None:
+                for norm, results in pgd_results.items():
+                    logger.info(f"Plotting Adversarial t-SNE for {norm}...")
+                    plot_tsne_adversarial(
+                        torch.cat(pgd_results[norm]["clean_logits"]).numpy(),
+                        torch.cat(pgd_results[norm]["clean_labels"]).numpy(),
+                        torch.cat(pgd_results[norm]["adv_logits"]).numpy(),
+                        torch.cat(pgd_results[norm]["adv_labels"]).numpy(),
+                        norm_label=norm
+                    )
+            else:
+                logger.warning("[Plotting Adversarial t-SNE is skipped — add --pgd_eval to generate adversarial "
+                               "logits first.")
+
 
 def run_corrupted_test(model, params, device) -> Dict[str, float]:
     """
@@ -178,7 +193,7 @@ def run_corrupted_test(model, params, device) -> Dict[str, float]:
     return results
 
 
-def run_pgd_eval(model, params, device) -> Dict[str, float]:
+def run_pgd_eval(model, params, device) -> Dict[str, Dict[str, Any]]:
     """
     Evaluate model robustness under PGD adversarial attack.
 
@@ -196,11 +211,7 @@ def run_pgd_eval(model, params, device) -> Dict[str, float]:
         device (torch.device): Compute device.
 
     Returns:
-        Dict[str, float]: {
-            "clean_accuracy": float,
-            "adv_accuracy": float,
-            "robust_accuracy_drop": float,
-        }
+        Dict[str, Dict[str, Any]]: Nested dictionary of results for each norm including logits, labels and accuracies.
     """
     alpha = params["pgd_alpha"]
     eps_l2 = params["pgd_eps_l2"]
@@ -218,7 +229,7 @@ def run_pgd_eval(model, params, device) -> Dict[str, float]:
 
     results = {}
 
-    logger.info("============ PGD Adversarial Evaluation ============")
+    logger.info("=========== PGD Adversarial Evaluation ===========")
     for norm in ["L2", "L-Inf"]:
         eps = eps_l2 if norm == "L2" else eps_linf
         attack_fn = pgd_linf_attack if norm == "L-Inf" else pgd_l2_attack
@@ -227,6 +238,9 @@ def run_pgd_eval(model, params, device) -> Dict[str, float]:
         logger.info("-" * 50)
 
         clean_correct, clean_acc, adv_correct, adv_acc, n = 0, 0, 0, 0, 0
+        clean_logits, clean_labels = [], []
+        adv_logits, adv_labels = [], []
+        misclassified_clean, misclassified_adv, misclassified_labels = [], [], []
 
         for imgs, labels in data_loader:
             imgs = imgs.to(device)
@@ -234,27 +248,41 @@ def run_pgd_eval(model, params, device) -> Dict[str, float]:
 
             # --- Clean accuracy (no grad needed) ---
             with torch.no_grad():
-                clean_preds = torch.argmax(model(imgs), dim=1)
-                clean_correct += clean_preds.eq(labels).sum().item()
+                clean_logit = model(imgs)
+                clean_logits.append(clean_logit.detach().cpu())
+                clean_labels.append(labels.cpu())
+
+                clean_preds = torch.argmax(clean_logit, dim=1)
+            clean_mask = clean_preds.eq(labels)
+            clean_correct += clean_mask.sum().item()
 
             # --- Adversarial accuracy ---
             # attack_fn handles model.eval() internally and returns normalized adv images
-            adv_imgs = attack_fn(
-                model=model,
-                images=imgs,
-                labels=labels,
-                mean=mean,
-                std=std,
-                eps=eps,
-                # alpha=alpha,
-                steps=steps,
-            )
+            adv_imgs = attack_fn(model=model, images=imgs, labels=labels, mean=mean, std=std, eps=eps,
+                                 # alpha=alpha,
+                                 steps=steps)
 
             with torch.no_grad():
-                adv_preds = torch.argmax(model(adv_imgs), dim=1)
-                adv_correct += adv_preds.eq(labels).sum().item()
+                adv_logit = model(adv_imgs)
+                adv_logits.append(adv_logit.detach().cpu())
+                adv_labels.append(labels.detach().cpu())
+
+                adv_preds = torch.argmax(adv_logit, dim=1)
+            adv_correct += adv_preds.eq(labels).sum().item()
 
             n += imgs.size(0)
+
+            # Collect misclassified samples
+            if len(misclassified_clean) < params["gradcam_num_samples"]:
+                fooled_mask = clean_mask & ~adv_preds.eq(labels)
+                fool_idx = fooled_mask.nonzero(as_tuple=True)[0]
+
+                for idx in fool_idx:
+                    if len(misclassified_clean) >= params["gradcam_num_samples"]:
+                        break
+                    misclassified_clean.append(imgs[idx].cpu())
+                    misclassified_adv.append(adv_imgs[idx].cpu())
+                    misclassified_labels.append(labels[idx].cpu().unsqueeze(0))
 
         clean_acc = clean_correct / n
         adv_acc = adv_correct / n
@@ -263,12 +291,19 @@ def run_pgd_eval(model, params, device) -> Dict[str, float]:
         logger.info(f"Clean Accuracy:          {clean_acc:.4f} ({clean_correct}/{n})")
         logger.info(f"Adversarial Accuracy:    {adv_acc:.4f}  ({adv_correct}/{n})")
         logger.info(f"Robust Accuracy Drop:    {acc_drop:.4f}")
-        logger.info("=" * 30)
+        logger.info("=" * 50)
 
         results[norm] = {
-            "clean_accuracy":        clean_acc,
-            "adv_accuracy":          adv_acc,
-            "robust_accuracy_drop":  acc_drop,
+            "clean_accuracy": clean_acc,
+            "adv_accuracy": adv_acc,
+            "robust_accuracy_drop": acc_drop,
+            "clean_logits": clean_logits,
+            "clean_labels": clean_labels,
+            "adv_logits": adv_logits if adv_logits else torch.empty(0),
+            "adv_labels": adv_labels if adv_labels else torch.empty(0),
+            "misclassified_clean": torch.cat(misclassified_clean) if misclassified_clean else torch.empty(0),
+            "misclassified_adv": torch.cat(misclassified_adv) if misclassified_adv else torch.empty(0),
+            "misclassified_labels": torch.cat(misclassified_labels) if misclassified_labels else torch.empty(0),
         }
 
     return results
