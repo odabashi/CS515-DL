@@ -107,10 +107,8 @@ def get_params():
                         help="L-inf epsilon for PGD attack (default 4/255)")
     parser.add_argument("--pgd_eps_l2", type=float, default=0.25,
                         help="L2 epsilon for PGD attack (default 0.25)")
-    parser.add_argument("--pgd_alpha_linf", type=float, default=1/255,
-                        help="Step size for L-inf PGD (default 1/255)")
-    parser.add_argument("--pgd_alpha_l2", type=float, default=0.05,
-                        help="Step size for L2 PGD (default 0.05)")
+    parser.add_argument("--pgd_alpha", type=float, default=1/255,
+                        help="Step size for PGD (default 1/255)")
 
     # Adversarial transferability
     parser.add_argument("--eval_transfer", action=argparse.BooleanOptionalAction, default=False,
@@ -121,7 +119,7 @@ def get_params():
     # GradCam
     parser.add_argument("--gradcam_eval", action=argparse.BooleanOptionalAction, default=False,
                         help="Generate Grad-CAM visualisations for adversarial samples")
-    parser.add_argument("--gradcam_num_samples", type=int, default=2,
+    parser.add_argument("--gradcam_num_samples", type=int, default=3,
                         help="Number of misclassified adversarial samples to visualise")
 
     args = parser.parse_args()
@@ -199,8 +197,7 @@ def get_params():
         "pgd_steps":                args.pgd_steps,
         "pgd_eps_linf":             args.pgd_eps_linf,
         "pgd_eps_l2":               args.pgd_eps_l2,
-        "pgd_alpha_linf":           args.pgd_alpha_linf,
-        "pgd_alpha_l2":             args.pgd_alpha_l2,
+        "pgd_alpha":                args.pgd_alpha,
 
         # Transferability
         "eval_transfer":            args.eval_transfer,
@@ -216,7 +213,7 @@ def get_params():
         "save_path":                "best_model.pth",
         "log_interval":             100,                # print every N batches
         "plot_tsne":                args.plot_tsne,
-        # "tsne_adv":               args.tsne_adv,
+        "tsne_adv":                 args.tsne_adv,
 
         # CLI
         "mode":                     args.mode,

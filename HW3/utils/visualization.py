@@ -1,18 +1,20 @@
 import datetime
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
+import matplotlib.cm as cm
 import seaborn as sns
 import numpy as np
+import torch.nn as nn
 import os
 from torchviz import make_dot
 import torch
 import logging
 from sklearn.manifold import TSNE
+from utils.gradcam import GradCAM
 
 
 logger = logging.getLogger("HW3")
 os.makedirs("./assets/", exist_ok=True)
-
 
 
 def save_fig(fig_id, tight_layout=True, fig_extension="png", resolution=300, assets_path="./assets/"):
@@ -234,3 +236,96 @@ def plot_tsne_adversarial(clean_logits, clean_labels, adv_logits, adv_labels, no
     save_fig(save_path)
     plt.close()
     logger.info(f"Adversarial t-SNE saved => ./assets/{save_path}.png")
+
+
+def plot_gradcam(misclassified_clean, misclassified_adv, misclassified_labels, misclassified_adv_preds, model,
+                 mean, stddev, device, norm_label, num_samples=5, save_path=None):
+    def overlay_heatmap(image, heatmap, alpha=0.4):
+        heatmap_color = cm.jet(heatmap)[..., :3]
+        overlay = (1 - alpha) * image + alpha * heatmap_color
+        return np.clip(overlay, 0, 1)
+
+    def tensor_to_image(tensor, mean, stddev, device):
+        tensor = tensor.to(device)
+        mean = torch.tensor(mean).view(1, -1, 1, 1).to(device)
+        stddev = torch.tensor(stddev).view(1, -1, 1, 1).to(device)
+
+        img = tensor * stddev + mean
+        img = img.clamp(0, 1)
+
+        img = img.squeeze().permute(1, 2, 0).cpu().numpy()
+        return img
+
+    def get_last_conv_layer(model):
+        """Automatically find the last Conv2d layer in the model."""
+        last_conv = None
+        for module in model.modules():
+            if isinstance(module, nn.Conv2d):
+                last_conv = module
+        if last_conv is None:
+            raise ValueError("No Conv2d layer found in the model.")
+        return last_conv
+
+    if save_path is None:
+        ts = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        save_path = f"tsne_adversarial_{norm_label}_{ts}"
+
+    model.eval()
+    target_layer = get_last_conv_layer(model)
+    gradcam = GradCAM(model, target_layer)
+
+    collected = 0
+    fig, axes = plt.subplots(num_samples, 4, figsize=(12, 4 * num_samples))
+
+    CIFAR_10_CLASSES = [
+        "airplane",
+        "automobile",
+        "bird",
+        "cat",
+        "deer",
+        "dog",
+        "frog",
+        "horse",
+        "ship",
+        "truck",
+    ]
+
+    for idx in range(len(misclassified_clean)):
+        clean_cam = gradcam.generate(misclassified_clean[idx], misclassified_labels[idx])
+        adv_cam = gradcam.generate(misclassified_adv[idx], misclassified_adv_preds[idx])
+
+        row = axes[collected]
+
+        # Clean image
+        row[0].imshow(tensor_to_image(misclassified_clean[idx], mean, stddev, device))
+        row[0].set_title(f"Clean\nLabel={CIFAR_10_CLASSES[misclassified_labels[idx].item()]}")
+
+        # Clean CAM
+        row[1].imshow(
+            overlay_heatmap(
+                tensor_to_image(misclassified_clean[idx], mean, stddev, device),
+                clean_cam
+            )
+        )
+        row[1].set_title(f"Clean GradCAM\nPred={CIFAR_10_CLASSES[misclassified_labels[idx].item()]}")
+
+        # Adv image
+        row[2].imshow(tensor_to_image(misclassified_adv[idx], mean, stddev, device))
+        row[2].set_title("Adversarial")
+
+        # Adv CAM
+        row[3].imshow(
+            overlay_heatmap(
+                tensor_to_image(misclassified_adv[idx], mean, stddev, device),
+                adv_cam
+            )
+        )
+        row[3].set_title(f"Adversarial GradCAM\nPred={CIFAR_10_CLASSES[misclassified_adv_preds[idx].item()]}")
+
+        for ax in row:
+            ax.axis("off")
+
+    gradcam.remove_hooks()
+    save_fig(save_path)
+    plt.close()
+    logger.info(f"Grad-CAM saved => ./assets/{save_path}.png")

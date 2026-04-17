@@ -9,7 +9,7 @@ from torchvision import datasets
 import logging
 from train import get_transforms
 from utils import (ClassificationMetrics, plot_confusion_matrix, plot_tsne, measure_runtime, pgd_l2_attack,
-                   pgd_linf_attack, plot_tsne_adversarial)
+                   pgd_linf_attack, plot_tsne_adversarial, plot_gradcam)
 from data_loaders import Cifar10cDataset, CIFAR_10_C_CORRUPTIONS
 
 
@@ -118,6 +118,26 @@ def run_test(model, params, device, teacher_model=None):
                     )
             else:
                 logger.warning("[Plotting Adversarial t-SNE is skipped — add --pgd_eval to generate adversarial "
+                               "logits first.")
+
+        if params.get("gradcam_eval", False):
+            if pgd_results is not None:
+                for norm, results in pgd_results.items():
+                    logger.info(f"Generating Grad-CAM for {norm}...")
+                    plot_gradcam(
+                        pgd_results[norm]["misclassified_clean"],
+                        pgd_results[norm]["misclassified_adv"],
+                        pgd_results[norm]["misclassified_labels"],
+                        pgd_results[norm]["misclassified_adv_preds"],
+                        model,
+                        mean=params["mean"],
+                        stddev=params["std"],
+                        device=device,
+                        norm_label=norm,
+                        num_samples=params["gradcam_num_samples"]
+                    )
+            else:
+                logger.warning("[Generating Grad-CAM is skipped — add --pgd_eval to generate adversarial "
                                "logits first.")
 
 
@@ -240,7 +260,7 @@ def run_pgd_eval(model, params, device) -> Dict[str, Dict[str, Any]]:
         clean_correct, clean_acc, adv_correct, adv_acc, n = 0, 0, 0, 0, 0
         clean_logits, clean_labels = [], []
         adv_logits, adv_labels = [], []
-        misclassified_clean, misclassified_adv, misclassified_labels = [], [], []
+        misclassified_clean, misclassified_adv, misclassified_labels, misclassified_adv_preds = [], [], [], []
 
         for imgs, labels in data_loader:
             imgs = imgs.to(device)
@@ -280,9 +300,10 @@ def run_pgd_eval(model, params, device) -> Dict[str, Dict[str, Any]]:
                 for idx in fool_idx:
                     if len(misclassified_clean) >= params["gradcam_num_samples"]:
                         break
-                    misclassified_clean.append(imgs[idx].cpu())
-                    misclassified_adv.append(adv_imgs[idx].cpu())
+                    misclassified_clean.append(imgs[idx:idx+1].detach().cpu())
+                    misclassified_adv.append(adv_imgs[idx:idx+1].detach().cpu())
                     misclassified_labels.append(labels[idx].cpu().unsqueeze(0))
+                    misclassified_adv_preds.append(adv_preds[idx].cpu().unsqueeze(0))
 
         clean_acc = clean_correct / n
         adv_acc = adv_correct / n
@@ -301,9 +322,10 @@ def run_pgd_eval(model, params, device) -> Dict[str, Dict[str, Any]]:
             "clean_labels": clean_labels,
             "adv_logits": adv_logits if adv_logits else torch.empty(0),
             "adv_labels": adv_labels if adv_labels else torch.empty(0),
-            "misclassified_clean": torch.cat(misclassified_clean) if misclassified_clean else torch.empty(0),
-            "misclassified_adv": torch.cat(misclassified_adv) if misclassified_adv else torch.empty(0),
+            "misclassified_clean": misclassified_clean if misclassified_clean else torch.empty(0),
+            "misclassified_adv": misclassified_adv if misclassified_adv else torch.empty(0),
             "misclassified_labels": torch.cat(misclassified_labels) if misclassified_labels else torch.empty(0),
+            "misclassified_adv_preds": torch.cat(misclassified_adv_preds) if misclassified_adv_preds else torch.empty(0)
         }
 
     return results

@@ -1,9 +1,10 @@
 from utils.early_stopping import EarlyStopping
 from utils.visualization import (plot_confusion_matrix, plot_learning_curves, visualize_model, plot_tsne,
-                                 plot_tsne_adversarial)
+                                 plot_tsne_adversarial, plot_gradcam)
 from utils.evaluation import ClassificationMetrics, compute_flops
 from utils.logging import setup_logger, measure_runtime
 from utils.attacks import pgd_l2_attack, pgd_linf_attack
+from utils.gradcam import GradCAM
 
 __all__ = [
     "EarlyStopping",
@@ -16,6 +17,8 @@ __all__ = [
     "measure_runtime",
     "plot_tsne",
     "plot_tsne_adversarial",
+    "plot_gradcam",
     "pgd_l2_attack",
     "pgd_linf_attack",
+    "GradCAM"
 ]
