@@ -325,6 +325,8 @@ def plot_gradcam(misclassified_clean, misclassified_adv, misclassified_labels, m
         for ax in row:
             ax.axis("off")
 
+        collected += 1
+
     gradcam.remove_hooks()
     save_fig(save_path)
     plt.close()
