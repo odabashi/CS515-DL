@@ -398,10 +398,9 @@ def train_one_epoch(model, loader, optimizer, criterion, device, params, teacher
 
         # AugMix JSD Consistency
         if use_jsd:
-            with torch.no_grad():
-                p_aug1 = F.softmax(model(imgs_aug1), dim=1)
-                p_aug2 = F.softmax(model(imgs_aug2), dim=1)
-            p_clean = F.softmax(out.detach(), dim=1)
+            p_clean = F.softmax(out, dim=1)
+            p_aug1 = F.softmax(model(imgs_aug1), dim=1)
+            p_aug2 = F.softmax(model(imgs_aug2), dim=1)
             jsd_term = jsd_loss(p_clean, p_aug1, p_aug2)
             loss = loss + params["jsd_lambda"] * jsd_term
 
