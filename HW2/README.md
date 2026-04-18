@@ -137,8 +137,8 @@ This section presents the results of two transfer learning strategies using a pr
 
 ## 📊 t-SNE Visualization Insight
 
-- [**Option 1**](./results/1-1%20Transfer Learning%20-%20Option%201/tsne.png): Highly overlapping clusters → poor feature separability  
-- [**Option 2**](./results/1-2%20Transfer Learning%20-%20Option%202/tsne.png): Clear cluster boundaries → strong learned representations  
+- [**Option 1**](./results/1-1%20Transfer%20Learning%20-%20Option%201/tsne.png): Highly overlapping clusters → poor feature separability  
+- [**Option 2**](./results/1-2%20Transfer%20Learning%20-%20Option%202/tsne.png): Clear cluster boundaries → strong learned representations  
 
 > This confirms that fine-tuning enables the model to learn a more discriminative feature space.
 
