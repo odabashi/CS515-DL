@@ -2,7 +2,7 @@
 
 Welcome to my repository! In this repository, I cover the codes for each homework in scope of Deep Learning Course. This includes implementations, experiments, and analysis.
 
----
+
 
 ## 📚 Homework List
 
@@ -11,21 +11,20 @@ Welcome to my repository! In this repository, I cover the codes for each homewor
 📎 **Explore HW1:**
 👉 [HW1 - MLP Experiments](./HW1)
 
----
+<br>
 
 ### 🔹 HW2: Transfer Learning & Knowledge Distillation
 
 📎 **Explore HW2:**
 👉 [HW2 - Transfer Learning & Knowledge Distillation](./HW2)
 
----
+<br>
 
 ### 🔹 HW3: Data Augmentation and Robustness of Deep Neural Architectures
 
 📎 **Explore HW3:**
 👉 [HW3 - Robustness & Data Augmentation](./HW3)
 
----
 
 ## 🚀 How to Navigate
 
@@ -37,14 +36,11 @@ Each homework folder contains:
 
 You can directly navigate using the links above to explore each topic in detail.
 
----
 
 ## 📝 Notes
 
 * All experiments are conducted on standard datasets (MNIST, CIFAR-10)
 * Results are reproducible via provided configurations
 * Modular code design allows easy extension
-
----
 
 Feel free to explore, reproduce, and build upon these experiments!

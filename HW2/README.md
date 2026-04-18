@@ -5,8 +5,6 @@ This section presents the results of two transfer learning strategies using a pr
 - **Option 1:** Frozen feature extractor + input resizing
 - **Option 2:** Full fine-tuning without resizing (adaptive architecture)
 
----
-
 ## 🧪 Experiment 1 — Frozen Features + Resized Input (224×224)
 
 ### ⚙️ Configuration
@@ -21,7 +19,6 @@ This section presents the results of two transfer learning strategies using a pr
 - Epochs: 30 (Early stopping at epoch 20)
 - Patience: 5
 
----
 
 ### 📈 Training Summary
 
@@ -33,7 +30,6 @@ This section presents the results of two transfer learning strategies using a pr
 | Validation Loss (best) | 2.0886                 |
 | Training Time | **3013.25s (~50 min)** |
 
----
 
 ### 🧪 Test Performance
 
@@ -44,7 +40,6 @@ This section presents the results of two transfer learning strategies using a pr
 | Recall | 0.3413 |
 | F1 Score | 0.2632 |
 
----
 
 ### 📊 Observations
 
@@ -54,7 +49,6 @@ This section presents the results of two transfer learning strategies using a pr
 - Strong **prediction bias toward few classes** (7, 8, 9) (See Confusion Matrix.)
 - Many classes are nearly ignored (e.g., class 5 = 0%)
 
----
 
 ### ⚠️ Key Insight
 
@@ -78,7 +72,6 @@ This section presents the results of two transfer learning strategies using a pr
 - Epochs: 30
 - Patience: 5
 
----
 
 ### 📈 Training Summary
 
@@ -90,7 +83,6 @@ This section presents the results of two transfer learning strategies using a pr
 | Best Validation Loss (best) | 0.1480 |
 | Training Time               | **1553.60s (~26 min)** |
 
----
 
 ### 🧪 Test Performance
 
@@ -101,7 +93,6 @@ This section presents the results of two transfer learning strategies using a pr
 | Recall | 0.8796 |
 | F1 Score | 0.8796 |
 
----
 
 ### 📊 Observations
 
@@ -111,7 +102,6 @@ This section presents the results of two transfer learning strategies using a pr
 - Confusion matrix shows **balanced predictions**
 - Training is **~2x faster** than Option 1
 
----
 
 ### ⚠️ Key Insight
 
@@ -131,7 +121,6 @@ This section presents the results of two transfer learning strategies using a pr
 | Convergence | Slow, unstable                                | Fast, stable                                        |
 | Bias | High                                          | Low                                                 |
 
----
 
 ## 🧠 Final Insights
 
@@ -145,16 +134,14 @@ This section presents the results of two transfer learning strategies using a pr
   - Learns dataset-specific features
   - More efficient despite training more parameters
 
----
 
 ## 📊 t-SNE Visualization Insight
 
-- **Option 1:** Highly overlapping clusters → poor feature separability  
-- **Option 2:** Clear cluster boundaries → strong learned representations  
+- **[Option 1](./results/1-1%20Transfer Learning%20-%20Option%201/tsne.png):** Highly overlapping clusters → poor feature separability  
+- **[Option 2](./results/1-2%20Transfer Learning%20-%20Option%202/tsne.png):** Clear cluster boundaries → strong learned representations  
 
 > This confirms that fine-tuning enables the model to learn a more discriminative feature space.
 
----
 
 ## ✅ Conclusion
 
@@ -173,7 +160,6 @@ This section presents a comprehensive comparison of different training strategie
 * Knowledge Distillation (KD)
 * Custom KD with MobileNet
 
----
 
 ## 🔹 Experiment 1: Simple CNN (Baseline)
 
@@ -337,7 +323,6 @@ This section presents a comprehensive comparison of different training strategie
 | CNN + KD                | 6.28M | 0.55M  | 76.33%                   | 74.81%    |
 | MobileNet + KD (Custom) | 96M   | 2.3M   | 94.96%                   | 89.55%    |
 
----
 
 # 🔍 Key Insights
 
@@ -346,7 +331,6 @@ This section presents a comprehensive comparison of different training strategie
 * ResNet + LS outperforms vanilla ResNet (+0.8%)
 * Slightly higher validation loss but better test accuracy → **better calibration**
 
----
 
 ### 2. Knowledge Distillation is Not Always Beneficial (for weak students)
 
@@ -356,14 +340,12 @@ This section presents a comprehensive comparison of different training strategie
   * Student capacity too low
   * Teacher knowledge not effectively utilized
 
----
 
 ### 3. Architecture Matters More Than KD Alone
 
 * CNN (with or without KD) is far behind ResNet
 * Capacity gap dominates performance
 
----
 
 ### 4. Custom KD + Better Student (MobileNet) Works Well
 
@@ -375,7 +357,6 @@ This section presents a comprehensive comparison of different training strategie
 
 👉 This is the most **efficient trade-off**
 
----
 
 ### 5. Best Trade-offs
 
@@ -385,7 +366,6 @@ This section presents a comprehensive comparison of different training strategie
 | Efficiency       | MobileNet + Custom KD |
 | Simplicity       | CNN baseline          |
 
----
 
 # 🧠 Final Takeaway
 

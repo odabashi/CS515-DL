@@ -10,7 +10,6 @@ We analyze the impact of:
 - Dropout & BatchNorm
 - Optimizers & Regularization
 
----
 
 # 📌 1. Early Stopping Experiments
 
@@ -28,7 +27,6 @@ We analyze the impact of:
 - Model continues training even after convergence → slight overfitting after epoch 6.
 - Wasted computation time.
 
----
 
 ## 1.2 With Early Stopping
 - **Architecture:** [256, 128]
@@ -148,7 +146,6 @@ We analyze the impact of:
 - L1 harms performance and slows training.
 - Combined L1+L2 → unnecessary complexity.
 
----
 
 # 🏆 Final Best Configuration
 
@@ -164,7 +161,6 @@ We analyze the impact of:
 - **Validation Accuracy:** **98.48%**
 - **Training Time:** 518s = ~8.5 Mins
 
----
 
 # 🔍 Overall Insights
 
@@ -174,7 +170,6 @@ We analyze the impact of:
 - Adam/AdamW are **clearly superior** optimizers.
 - Simplicity (ReLU + well-sized network) still wins over complex setups.
 
----
 
 # 📈 Key Takeaway
 
