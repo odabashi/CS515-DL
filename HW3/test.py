@@ -123,17 +123,17 @@ def run_test(model, params, device, teacher_model=None):
         if params.get("gradcam_eval", False):
             if pgd_results is not None:
                 for norm, results in pgd_results.items():
+                    attack_fn = pgd_linf_attack if norm == "L-Inf" else pgd_l2_attack
+                    eps = params["pgd_eps_l2"] if norm == "L2" else params["pgd_eps_linf"]
                     logger.info(f"Generating Grad-CAM for {norm}...")
                     plot_gradcam(
-                        pgd_results[norm]["misclassified_clean"],
-                        pgd_results[norm]["misclassified_adv"],
-                        pgd_results[norm]["misclassified_labels"],
-                        pgd_results[norm]["misclassified_adv_preds"],
+                        params,
+                        data_loader,
+                        attack_fn,
                         model,
-                        mean=params["mean"],
-                        stddev=params["std"],
                         device=device,
                         norm_label=norm,
+                        norm_eps=eps,
                         num_samples=params["gradcam_num_samples"]
                     )
             else:

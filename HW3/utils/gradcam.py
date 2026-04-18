@@ -31,17 +31,18 @@ class GradCAM:
             x = x.unsqueeze(0)
 
         device = next(self.model.parameters()).device
-        x = x.to(device)
-        x.requires_grad = True
-        with torch.set_grad_enabled(True):
-            self.model.zero_grad()
-            logits = self.model(x)
+        x = x.to(device).detach().requires_grad_(True)
 
-            if class_idx is None:
-                class_idx = logits.argmax(dim=1)
+        self.model.zero_grad()
+        logits = self.model(x)
 
-            loss = logits[0, class_idx]
-            loss.backward()
+        if class_idx is None:
+            class_idx = logits.argmax(dim=1).item()
+        else:
+            class_idx = class_idx.item() if torch.is_tensor(class_idx) else class_idx
+
+        loss = logits[0, class_idx]
+        loss.backward()
 
         # Compute weights: global average pool of gradients
         weights = self.gradients.mean(dim=(2, 3), keepdim=True)
@@ -56,10 +57,7 @@ class GradCAM:
 
         # Min-max normalise to [0, 1]
         cam_min, cam_max = cam.min(), cam.max()
-        if cam_max > cam_min:
-            cam = (cam - cam_min) / (cam_max - cam_min)
-        else:
-            cam = torch.zeros_like(cam)
+        cam = (cam - cam_min) / (cam_max - cam_min + 1e-8)
 
         return cam.detach().cpu().numpy()
 

@@ -57,7 +57,7 @@ def get_params():
                         metavar=("L1", "L2", "L3", "L4"),
                         help="Number of blocks per ResNet layer (default: 2 2 2 2 = ResNet-18)")
 
-    parser.add_argument('--plot_tsne', action=argparse.BooleanOptionalAction, default=False)
+    parser.add_argument('--plot_tsne', action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--tsne_adv", action=argparse.BooleanOptionalAction, default=True,
                         help="Overlay adversarial samples on t-SNE plot")
 
@@ -99,7 +99,7 @@ def get_params():
                         help="Weight for the JSD consistency loss term (default 12.0)")
 
     # PGD adversarial evaluation
-    parser.add_argument("--pgd_eval", action=argparse.BooleanOptionalAction, default=False,
+    parser.add_argument("--pgd_eval", action=argparse.BooleanOptionalAction, default=True,
                         help="Run PGD adversarial robustness evaluation")
     parser.add_argument("--pgd_steps", type=int, default=20,
                         help="Number of PGD attack steps (default 20 -> PGD-20)")
@@ -117,7 +117,7 @@ def get_params():
                         help="Path to trained student model weights")
 
     # GradCam
-    parser.add_argument("--gradcam_eval", action=argparse.BooleanOptionalAction, default=False,
+    parser.add_argument("--gradcam_eval", action=argparse.BooleanOptionalAction, default=True,
                         help="Generate Grad-CAM visualisations for adversarial samples")
     parser.add_argument("--gradcam_num_samples", type=int, default=3,
                         help="Number of misclassified adversarial samples to visualise")
