@@ -71,12 +71,12 @@ In this assignment we present a comprehensive evaluation of model robustness und
 ## 🔹 Visual Analysis
 
 - t-SNE:
-  - [L2](./assets/tsne_L2_baseline.png)
-  - [L∞](./assets/tsne_Linf_baseline.png)
+  - [L2](./results/exp1/tsne_adversarial_l2.png)
+  - [L∞](./results/exp1/tsne_adversarial_l-inf.png)
 
 - Grad-CAM:
-  - [L2](./assets/gradcam_L2_baseline.png)
-  - [L∞](./assets/gradcam_Linf_baseline.png)
+  - [L2](./results/exp1/gradcam_l2.png)
+  - [L∞](./results/exp1/gradcam_l-inf.png)
 
 👉 **Insights:**
 - t-SNE → adversarial samples move into incorrect clusters  
@@ -159,12 +159,12 @@ Compared to baseline:
 ## 🔹 Visual Analysis
 
 - t-SNE:
-  - [L2](./assets/tsne_L2_augmix.png)
-  - [L∞](./assets/tsne_Linf_augmix.png)
+  - [L2](./results/exp2/tsne_adversarial_l2.png)
+  - [L∞](./results/exp2/tsne_adversarial_l-inf.png)
 
 - Grad-CAM:
-  - [L2](./assets/gradcam_L2_augmix.png)
-  - [L∞](./assets/gradcam_Linf_augmix.png)
+  - [L2](./results/exp2/gradcam_l2.png)
+  - [L∞](./results/exp2/gradcam_l-inf.png)
 
 
 ---
@@ -235,12 +235,12 @@ Compared to baseline:
 ## 🔹 Visual Analysis
 
 - t-SNE:
-  - [L2](./assets/tsne_L2_student.png)
-  - [L∞](./assets/tsne_Linf_student.png)
+  - [L2](./results/exp3/tsne_adversarial_l2.png)
+  - [L∞](./results/exp3/tsne_adversarial_l-inf.png)
 
 - Grad-CAM:
-  - [L2](./assets/gradcam_L2_student.png)
-  - [L∞](./assets/gradcam_Linf_student.png)
+  - [L2](./results/exp3/gradcam_l2.png)
+  - [L∞](./results/exp3/gradcam_l-inf.png)
 
 ---
 

@@ -120,25 +120,21 @@ def run_test(model, params, device, teacher_model=None):
                 logger.warning("[Plotting Adversarial t-SNE is skipped — add --pgd_eval to generate adversarial "
                                "logits first.")
 
-        if params.get("gradcam_eval", False):
-            if pgd_results is not None:
-                for norm, results in pgd_results.items():
-                    attack_fn = pgd_linf_attack if norm == "L-Inf" else pgd_l2_attack
-                    eps = params["pgd_eps_l2"] if norm == "L2" else params["pgd_eps_linf"]
-                    logger.info(f"Generating Grad-CAM for {norm}...")
-                    plot_gradcam(
-                        params,
-                        data_loader,
-                        attack_fn,
-                        model,
-                        device=device,
-                        norm_label=norm,
-                        norm_eps=eps,
-                        num_samples=params["gradcam_num_samples"]
-                    )
-            else:
-                logger.warning("[Generating Grad-CAM is skipped — add --pgd_eval to generate adversarial "
-                               "logits first.")
+    if params.get("gradcam_eval", False):
+        for norm in ["L-Inf", "L2"]:
+            attack_fn = pgd_linf_attack if norm == "L-Inf" else pgd_l2_attack
+            eps = params["pgd_eps_l2"] if norm == "L2" else params["pgd_eps_linf"]
+            logger.info(f"Generating Grad-CAM for {norm}...")
+            plot_gradcam(
+                params,
+                data_loader,
+                attack_fn,
+                model,
+                device=device,
+                norm_label=norm,
+                norm_eps=eps,
+                num_samples=params["gradcam_num_samples"]
+            )
 
 
 def run_corrupted_test(model, params, device) -> Dict[str, float]:
