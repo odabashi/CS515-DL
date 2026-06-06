@@ -11,6 +11,22 @@ Layer 2 -   get_params() with argparse.
 import argparse
 import torch
 
+
+# =============================================================================
+# Device selection
+# =============================================================================
+
+def _select_device() -> str:
+    """
+    Best available compute device.  Priority: CUDA -> MPS (Apple Silicon) -> CPU.
+    """
+    if torch.cuda.is_available():
+        return "cuda"
+    elif torch.backends.mps.is_available():
+        return "mps"
+    return "cpu"
+
+
 # =============================================================================
 # Layer 1 - Structural constants
 # =============================================================================
@@ -48,7 +64,8 @@ def get_params() -> dict:
     Returns:
         dict: flat configuration; keys map 1-to-1 to argparse dest names
     """
-    parser = argparse.ArgumentParser(description="Stock Forecasting - LSTM / GRU deep-learning pipeline", 
+    parser = argparse.ArgumentParser(
+        description="Stock Forecasting - LSTM / GRU deep-learning pipeline",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
 
@@ -108,7 +125,7 @@ def get_params() -> dict:
         # Run control
         "mode": args.mode,
         "part": args.part,
-        "device": args.device,
+        "device": args.device or _select_device(),
         "seed": args.seed,
 
         # Data
