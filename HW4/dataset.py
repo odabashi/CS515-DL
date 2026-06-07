@@ -285,7 +285,15 @@ def build_turning_point_targets(high: np.ndarray, close: np.ndarray, t: int) -> 
     'close' at time t as the baseline.
     """
     p_t = close[t]
-    returns = np.array([(high[t + d] - p_t) / p_t for d in range(1, D + 1)], dtype=np.float32)
+    # # Instead of Net Return: returns = (high - close) / close
+    # returns = np.array([(high[t + d] - p_t) / p_t for d in range(1, D + 1)], dtype=np.float32)
+
+    # We calculate Gross Return (Price Multiplier)
+    returns = np.array([high[t + d] / p_t for d in range(1, D + 1)], dtype=np.float32)
+
+    # If a stock goes up by 10%, the Net Return is 0.1, but the Gross Return is 1.1.
+    # This way it is possible to have a BUY signal more likely, otherwise, it is so hard to experience a 110% increase
+    # in price within your D=5 day window. For example, a $100 stock would need to hit $210 in under a week.
     label = int(np.any(returns > GAMMA))  # 1 = BUY, 0 = PASS
     return returns, label
 
