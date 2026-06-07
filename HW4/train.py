@@ -213,7 +213,9 @@ def train_one_epoch(model: nn.Module, loader: DataLoader, optimizer: torch.optim
     """
     model.train()
     mse_criterion = nn.MSELoss()
-    bce_criterion = nn.BCEWithLogitsLoss()  # only used in turning_point mode
+    # Heavily penalize the model for missing a "Buy" signal
+    pos_weight = torch.tensor([10.0], device=device)
+    bce_criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)     # only used in turning_point mode
 
     loss_meter = AverageMeter("train_loss")
     mse_sub_meter = AverageMeter("train_mse")
@@ -276,7 +278,8 @@ def validate(model: nn.Module, loader: DataLoader, device: str, mode: str, bce_l
     model.eval()  # disables dropout; uses running stats in batch-norm
 
     mse_criterion = nn.MSELoss()
-    bce_criterion = nn.BCEWithLogitsLoss()
+    pos_weight = torch.tensor([10.0], device=device)
+    bce_criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
     loss_meter = AverageMeter("val_loss")
     mse_meter = AverageMeter("val_mse")
