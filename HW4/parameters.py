@@ -78,30 +78,30 @@ def get_params() -> dict:
     parser.add_argument("--seed", type=int, default=42, help="Global random seed for reproducibility")
 
     # Data
-    parser.add_argument("--tickers", type=str, nargs="+", default=["AAPL", "MSFT", "GOOGL"], 
+    parser.add_argument("--tickers", type=str, nargs="+", default=["AAPL", "NVDA", "GOOGL"],
                         help="S&P 500 ticker symbols to download")
     parser.add_argument("--data_dir", type=str, default="data", help="Directory for cached CSV files")
 
     # Model architecture
-    parser.add_argument("--hidden_size", type=int, default=64, help="Hidden units per LSTM / GRU layer")
-    parser.add_argument("--num_layers", type=int, default=2, help="Number of stacked recurrent layers")
-    parser.add_argument("--dropout", type=float, default=0.2, 
+    parser.add_argument("--hidden_size", type=int, default=16, help="Hidden units per LSTM / GRU layer")
+    parser.add_argument("--num_layers", type=int, default=1, help="Number of stacked recurrent layers")
+    parser.add_argument("--dropout", type=float, default=0.3,
                         help="Dropout probability (applied between and after recurrent layers)")
     parser.add_argument("--no_ma_features", action="store_true", default=False, 
                         help="Disable the 1-D conv moving-average auxiliary features")
 
     # Training hyperparameters
-    parser.add_argument("--epochs", type=int, default=300)
-    parser.add_argument("--batch_size", type=int, default=64)
-    parser.add_argument("--lr", type=float, default=1e-3, help="AdamW learning rate")
-    parser.add_argument("--weight_decay", type=float, default=1e-4, help="AdamW L2 weight decay")
+    parser.add_argument("--epochs", type=int, default=150)
+    parser.add_argument("--batch_size", type=int, default=32)
+    parser.add_argument("--lr", type=float, default=1e-4, help="AdamW learning rate")
+    parser.add_argument("--weight_decay", type=float, default=1e-2, help="AdamW L2 weight decay")
     parser.add_argument("--warmup_epochs", type=int, default=5,
                         help="Linear warm-up epochs before cosine decay")
     parser.add_argument("--min_lr", type=float, default=1e-6, 
                         help="Minimum LR at the end of cosine annealing")
 
     # Regularisation / stopping
-    parser.add_argument("--patience", type=int, default=10, help="Early stopping patience (0 = disabled)")
+    parser.add_argument("--patience", type=int, default=15, help="Early stopping patience (0 = disabled)")
     parser.add_argument("--grad_clip", type=float, default=1.0, help="Global gradient norm clip value")
 
     # Part (d) specific
