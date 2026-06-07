@@ -25,6 +25,12 @@ Welcome to my repository! In this repository, I cover the codes for each homewor
 📎 **Explore HW3:**
 👉 [HW3 - Robustness & Data Augmentation](./HW3)
 
+<br>
+
+### 🔹 HW4: Sequence Modeling: Financial Forecasting
+📎 **Explore HW4:**
+👉 [HW4 - Sequence Modeling](./HW4)
+
 
 ## 🚀 How to Navigate
 
