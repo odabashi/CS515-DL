@@ -94,9 +94,9 @@ class BiDirectionalStockModel(nn.Module):
             rnn_out, h_n = self.rnn(x)
             last_hidden = torch.cat([h_n[-2], h_n[-1]], dim=-1)  # (batch, 2*H)
 
-        feat = self.dropout(last_hidden)               # (batch, 2*H)
+        feat = self.dropout(last_hidden)                # (batch, 2*H)
 
-        reg_out = self.fc_reg(feat)                    # (batch, D)
-        cls_out = self.sigmoid(self.fc_cls(feat))      # (batch, 1)
+        reg_out = self.fc_reg(feat)                     # (batch, D)
+        cls_out = self.fc_cls(feat)                     # (batch, 1)
 
         return reg_out, cls_out

@@ -213,7 +213,7 @@ def train_one_epoch(model: nn.Module, loader: DataLoader, optimizer: torch.optim
     """
     model.train()
     mse_criterion = nn.MSELoss()
-    bce_criterion = nn.BCELoss()  # only used in turning_point mode
+    bce_criterion = nn.BCEWithLogitsLoss()  # only used in turning_point mode
 
     loss_meter = AverageMeter("train_loss")
     mse_sub_meter = AverageMeter("train_mse")
@@ -276,7 +276,7 @@ def validate(model: nn.Module, loader: DataLoader, device: str, mode: str, bce_l
     model.eval()  # disables dropout; uses running stats in batch-norm
 
     mse_criterion = nn.MSELoss()
-    bce_criterion = nn.BCELoss()
+    bce_criterion = nn.BCEWithLogitsLoss()
 
     loss_meter = AverageMeter("val_loss")
     mse_meter = AverageMeter("val_mse")
@@ -313,7 +313,7 @@ def validate(model: nn.Module, loader: DataLoader, device: str, mode: str, bce_l
             loss_meter.update(loss.item(), n=B)
             mse_meter.update(mse_loss.item(), n=B)
             bce_meter.update(bce_loss.item(), n=B)
-            binary_tracker.update(y_lbl_pred, y_lbl_true)
+            binary_tracker.update(torch.sigmoid(y_lbl_pred), y_lbl_true)
 
     result = {
         "loss": loss_meter.avg,
@@ -442,13 +442,13 @@ def run_training(model: nn.Module, train_loader: DataLoader, val_loader: DataLoa
             )
             print(f"Saved best model (validation_loss={best_val_loss:.6f})")
 
-            # Early stopping
-            if patience > 0:
-                early_stop.step(val_metrics["loss"])
-                if early_stop.stop:
-                    print(f"Early stopping triggered. Epoch {epoch - patience} had the lowest validation loss "
-                          f"({best_val_loss:.6f}).")
-                    break
+        # Early stopping
+        if patience > 0:
+            early_stop.step(val_metrics["loss"])
+            if early_stop.stop:
+                print(f"Early stopping triggered. Epoch {epoch - patience} had the lowest validation loss "
+                      f"({best_val_loss:.6f}).")
+                break
 
     # Restore best weights before returning
     if best_weights is not None:
