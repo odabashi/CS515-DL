@@ -91,11 +91,11 @@ def get_params() -> dict:
                         help="Disable the 1-D conv moving-average auxiliary features")
 
     # Training hyperparameters
-    parser.add_argument("--epochs", type=int, default=50)
+    parser.add_argument("--epochs", type=int, default=300)
     parser.add_argument("--batch_size", type=int, default=64)
     parser.add_argument("--lr", type=float, default=1e-3, help="AdamW learning rate")
     parser.add_argument("--weight_decay", type=float, default=1e-4, help="AdamW L2 weight decay")
-    parser.add_argument("--warmup_epochs",type=int, default=5, 
+    parser.add_argument("--warmup_epochs", type=int, default=5,
                         help="Linear warm-up epochs before cosine decay")
     parser.add_argument("--min_lr", type=float, default=1e-6, 
                         help="Minimum LR at the end of cosine annealing")

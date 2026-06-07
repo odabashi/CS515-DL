@@ -1,15 +1,3 @@
-# =============================================================================
-# src/visualize.py  —  All plotting for the stock-forecasting project
-# =============================================================================
-#
-# Adapted from the ConvViT visualization module.
-# Structural changes
-#   • save_fig     — kept almost verbatim; timestamp helper retained
-#   • plot_training_dashboard — GridSpec 2×2 kept; top-1/top-5 panels replaced
-#                               by val_rmse and val_f1 (regression context)
-#   • LR log-scale formatter  — ported directly from reference (beautiful!)
-#   • New plots added: plot_per_horizon_rmse, plot_exact_vs_rolling,
-#                      plot_confusion_matrix, plot_all_learning_curves
 """
 utils/visualization.py
 All plotting for the stock-forecasting project
@@ -31,7 +19,8 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
 
-os.makedirs("./assets/", exist_ok=True)
+
+os.makedirs(os.path.join(os.path.dirname(__file__), "./assets/"), exist_ok=True)
 
 
 # =============================================================================

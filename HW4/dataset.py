@@ -425,14 +425,3 @@ def build_dataloaders(mode: str = "exact", batch_size: int = 64, tickers: list[s
     test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=False, num_workers=0)
 
     return train_loader, val_loader, test_loader
-
-
-if __name__ == "__main__":
-    print("=" * 55)
-    for m in ("exact", "rolling", "turning_point"):
-        tl, vl, tel = build_dataloaders(mode=m, batch_size=64)
-        batch = next(iter(tl))
-        X = batch[0]
-        print(f"mode={m:<15}  X={tuple(X.shape)}  "
-              f"y={tuple(batch[1].shape)}  batches={len(tl)}")
-    print("\n✓  dataset.py smoke test passed.")
