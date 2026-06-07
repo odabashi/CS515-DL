@@ -115,17 +115,13 @@ Each stock was normalized independently using min-max scaling fitted only on the
 
 The assignment defines the turning-point target using net return:
 
-$
-\frac{P_{new} - P_{old}}{P_{old}}
-$
+$\frac{P_{new} - P_{old}}{P_{old}}$
+
 
 With $γ = 1.1$, this would require a **110% price increase within 5 trading days**, which is unrealistic for large-cap stocks and produces almost all PASS labels.
 
 Therefore, the implementation used gross return:
-
-$
-\frac{P_{new}}{P_{old}}
-$
+$\frac{P_{new}}{P_{old}}$
 
 Under this interpretation, $γ = 1.1$ means a **10% price increase**, which is more realistic.
 
@@ -184,7 +180,7 @@ Under this interpretation, $γ = 1.1$ means a **10% price increase**, which is m
 To investigate the classifier collapse, three additional experiments were performed:
 
 1. Increase BCE weight: $λ = 5$
-2. Use positive-class weighting: $pos\_weight = 10$
+2. Use positive-class weighting: `pos_weight` = 10
 3. Combine both methods
 
 ## 🔹 Ablation Results
@@ -195,10 +191,10 @@ To investigate the classifier collapse, three additional experiments were perfor
 | Baseline ($λ=0.5$)     | BiGRU  | **0.0426** |     0.9206 |     0.0000 | 0.0000 | 0.0000 |  0 |  0 |
 | $λ=5$                  | BiLSTM |     0.0755 |     0.9206 |     0.0000 | 0.0000 | 0.0000 |  0 |  0 |
 | $λ=5$                  | BiGRU  |     0.0918 |     0.9206 |     0.0000 | 0.0000 | 0.0000 |  0 |  0 |
-| $pos\_weight=10$        | BiLSTM |     0.0493 |     0.9206 |     0.0000 | 0.0000 | 0.0000 |  0 |  0 |
-| $pos\_weight=10$        | BiGRU  |     0.0976 |     0.9206 |     0.0000 | 0.0000 | 0.0000 |  0 |  0 |
-| $λ=5 + pos\_weight=10$ | BiLSTM |     0.1970 |     0.9206 |     0.0000 | 0.0000 | 0.0000 |  0 |  0 |
-| $λ=5 + pos\_weight=10$ | BiGRU  |     0.0838 | **0.9219** | **1.0000** | 0.0160 | 0.0315 |  2 |  0 |
+| `pos_weight`=10       | BiLSTM |     0.0493 |     0.9206 |     0.0000 | 0.0000 | 0.0000 |  0 |  0 |
+| `pos_weight`=10        | BiGRU  |     0.0976 |     0.9206 |     0.0000 | 0.0000 | 0.0000 |  0 |  0 |
+| $λ=5$ + `pos_weight`=10 | BiLSTM |     0.1970 |     0.9206 |     0.0000 | 0.0000 | 0.0000 |  0 |  0 |
+| $λ=5$ + `pos_weight`=10 | BiGRU  |     0.0838 | **0.9219** | **1.0000** | 0.0160 | 0.0315 |  2 |  0 |
 
 ## 🔍 Ablation Observations
 
