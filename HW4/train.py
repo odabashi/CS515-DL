@@ -285,10 +285,6 @@ def validate(model: nn.Module, loader: DataLoader, device: str, mode: str, bce_l
     # Initialize the stateful tracker if we are in turning_point mode
     binary_tracker = BinaryMetrics() if mode == "turning_point" else None
 
-    # For classification metrics in turning_point mode
-    all_preds: list[torch.Tensor] = []
-    all_labels: list[torch.Tensor] = []
-
     for batch in loader:
         X = batch[0].to(device)
         B = X.size(0)
@@ -320,7 +316,7 @@ def validate(model: nn.Module, loader: DataLoader, device: str, mode: str, bce_l
         "rmse": mse_meter.avg ** 0.5  # RMSE is in the same units as the return ratio
     }
 
-    if mode == "turning_point" and all_preds:
+    if mode == "turning_point":
         result["mse_loss"] = mse_meter.avg
         result["bce_loss"] = bce_meter.avg
 

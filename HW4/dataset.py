@@ -18,51 +18,12 @@ from parameters import (FEATURES, START_DATE, END_DATE, TRAIN_END, VAL_END, T, D
 
 # Default tickers used when the caller does not supply them.
 # In a full run main.py passes cfg["tickers"] explicitly.
-_DEFAULT_TICKERS = ["AAPL", "MSFT", "GOOGL"]
+_DEFAULT_TICKERS = ["AAPL", "NVDA", "GOOGL"]
 
 
 # =============================================================================
 # Download & split raw data
 # =============================================================================
-
-def _generate_synthetic_ohlc(ticker: str, start: str, end: str) -> pd.DataFrame:
-    """
-    Fallback: generate realistic-looking OHLC data with a geometric Brownian
-    motion (GBM) model. Used automatically when yfinance is unavailable (e.g. in sandboxed / offline environments).
-
-    GBM recap: price evolves as  S_t = S_{t-1} * exp((mu - 0.5*sigma^2)*dt + sigma*sqrt(dt)*Z)
-    where Z ~ N(0,1). This is the standard Black-Scholes price model.
-
-    NOTE: On our local machine with internet access, the real yfinance data will be used instead. This function
-    is never called in that case.
-    """
-    rng = np.random.default_rng(abs(hash(ticker)) % (2 ** 31))  # ticker-specific seed
-
-    dates = pd.bdate_range(start=start, end=end)  # business days only
-    n = len(dates)
-
-    # Starting prices differ per ticker to make the data look distinct.
-    s0 = {"AAPL": 150.0, "MSFT": 200.0, "GOOGL": 2800.0}.get(ticker, 100.0)
-    mu = 0.10 / 252  # ~10 % annual drift, scaled to daily
-    sigma = 0.20 / np.sqrt(252)  # ~20 % annual volatility, scaled to daily
-
-    # Simulate closing prices
-    shocks = rng.standard_normal(n)
-    log_returns = (mu - 0.5 * sigma ** 2) + sigma * shocks
-    close = s0 * np.exp(np.cumsum(log_returns))
-
-    # Derive Open / High / Low from Close with realistic intraday noise
-    daily_range = close * rng.uniform(0.005, 0.025, n)  # 0.5 – 2.5 % daily range
-    open_ = close * (1 + rng.uniform(-0.01, 0.01, n))
-    high = np.maximum(close, open_) + rng.uniform(0, 1, n) * daily_range
-    low = np.minimum(close, open_) - rng.uniform(0, 1, n) * daily_range
-
-    df = pd.DataFrame(
-        {"Open": open_, "High": high, "Low": low, "Close": close},
-        index=dates
-    )
-    return df.astype(np.float32)
-
 
 def _load_clean_csv(path: str) -> pd.DataFrame | None:
     """
@@ -119,7 +80,6 @@ def _fetch_from_yfinance(ticker: str, start: str, end: str) -> pd.DataFrame:
 def download_data(tickers=None, start=START_DATE, end=END_DATE, data_dir: str = "data") -> dict[str, pd.DataFrame]:
     """
     Download daily OHLC data from Yahoo Finance for each ticker; cache to CSV.
-    Falls back to synthetic GBM data if yfinance is unavailable.
 
     Stale CSVs written by older versions of this code (multi-index format)
     are detected automatically, deleted, and re-downloaded.
@@ -160,13 +120,8 @@ def download_data(tickers=None, start=START_DATE, end=END_DATE, data_dir: str = 
                 print(f"[download] Saved {ticker} -> '{cache_path}' with {len(df)} rows")
             except Exception as e:
                 print(f"[warning] yfinance failed for {ticker}: {e}")
-                print(f"[fallback] Generating synthetic OHLC data for {ticker} ...")
-                df = _generate_synthetic_ohlc(ticker, start, end)
-                df.to_csv(cache_path)
-                print(f"[fallback] Saved synthetic {ticker} -> '{cache_path}' ({len(df)} rows)")
-
+                raise
         data[ticker] = df
-
     return data
 
 
