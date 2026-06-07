@@ -18,7 +18,7 @@ from parameters import (FEATURES, START_DATE, END_DATE, TRAIN_END, VAL_END, T, D
 
 # Default tickers used when the caller does not supply them.
 # In a full run main.py passes cfg["tickers"] explicitly.
-_DEFAULT_TICKERS = ["AAPL", "NVDA", "GOOGL"]
+_DEFAULT_TICKERS = ["AAPL", "NVDA", "MSFT", "META", "AMZN", "TSLA", "GOOGL"]
 
 
 # =============================================================================

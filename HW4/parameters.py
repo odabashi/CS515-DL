@@ -78,7 +78,8 @@ def get_params() -> dict:
     parser.add_argument("--seed", type=int, default=42, help="Global random seed for reproducibility")
 
     # Data
-    parser.add_argument("--tickers", type=str, nargs="+", default=["AAPL", "NVDA", "GOOGL"],
+    parser.add_argument("--tickers", type=str, nargs="+",
+                        default=["AAPL", "NVDA", "MSFT", "META", "AMZN", "TSLA", "GOOGL"],
                         help="S&P 500 ticker symbols to download")
     parser.add_argument("--data_dir", type=str, default="data", help="Directory for cached CSV files")
 
